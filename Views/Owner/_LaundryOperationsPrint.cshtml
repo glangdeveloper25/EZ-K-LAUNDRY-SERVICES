@@ -1,0 +1,88 @@
+@model EZKLaundrySystem.Controllers.OwnerDashboardVM
+
+@{
+    var preparedBy = Context.Session.GetString("UserName");
+}
+
+@* Render every loaded order independently of dashboard pagination. *@
+<article id="laundryOperationsDocument" aria-labelledby="laundryOperationsDocumentTitle">
+    <header class="operations-document-header">
+        <div class="operations-document-brand">
+            <img src="~/images/ezk-laundry-logo.png" alt="EZ-K Laundry Services logo" />
+            <p>EZ-K Laundry Services</p>
+        </div>
+        <div class="operations-document-title">
+            <p class="operations-document-eyebrow">Business records</p>
+            <h1 id="laundryOperationsDocumentTitle">Laundry Operations Report</h1>
+            <p>Laundry order details</p>
+        </div>
+    </header>
+
+    <dl class="operations-document-metadata">
+        <div>
+            <dt>Report coverage</dt>
+            <dd>All laundry orders</dd>
+        </div>
+        <div class="operations-document-generated">
+            <dt>Date generated</dt>
+            <dd id="laundryOperationsPrintDate"></dd>
+        </div>
+        <div class="operations-document-prepared">
+            <dt>Prepared by</dt>
+            <dd id="laundryOperationsPreparedBy">@(string.IsNullOrWhiteSpace(preparedBy) ? "Not available" : preparedBy.Trim())</dd>
+        </div>
+    </dl>
+
+    <div class="operations-document-section-heading">
+        <h2>Order details</h2>
+        <p>Records shown: <span id="laundryOperationsCount">@Model.BookingList.Count</span></p>
+    </div>
+    <p class="operations-document-note">Amounts are booking charges in Philippine pesos (PHP), not proof of payment.</p>
+    <table class="operations-document-table" aria-label="Laundry order details">
+        <colgroup>
+            <col style="width:12%" />
+            <col style="width:22%" />
+            <col style="width:37%" />
+            <col style="width:15%" />
+            <col style="width:14%" />
+        </colgroup>
+        <thead>
+            <tr>
+                <th scope="col">Order ID</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Service</th>
+                <th scope="col" class="operations-document-amount">Amount</th>
+                <th scope="col">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.BookingList.Count == 0)
+            {
+                <tr><td colspan="5" class="operations-document-empty">No laundry operations found.</td></tr>
+            }
+            @foreach (var booking in Model.BookingList)
+            {
+                <tr>
+                    <td class="operations-document-reference">#BK-@booking.Id</td>
+                    <td>@booking.CustomerName</td>
+                    <td>
+                        @booking.ServiceType
+                        @if (!string.IsNullOrWhiteSpace(booking.CustomerNotes))
+                        {
+                            <div class="operations-document-notes">
+                                <strong>Customer instructions</strong>
+                                <div class="operations-document-instructions">@booking.CustomerNotes</div>
+                            </div>
+                        }
+                    </td>
+                    <td class="operations-document-amount">&#8369;@booking.Amount.ToString("N2")</td>
+                    <td>@booking.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <footer class="operations-document-footer">
+        <p>System-generated report of all laundry orders loaded in the Owner portal.</p>
+        <p class="operations-document-end">End of report</p>
+    </footer>
+</article>

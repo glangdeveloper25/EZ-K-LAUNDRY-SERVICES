@@ -1,0 +1,6 @@
+bin/
+obj/
+tmp/
+.vs/
+# Local secrets (SMS password). Online settings go in the hosting service's environment variables.
+appsettings.Development.json

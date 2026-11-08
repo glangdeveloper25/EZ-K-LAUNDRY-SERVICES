@@ -1,0 +1,54 @@
+.booking-history-toolbar {
+    display: grid;
+    grid-template-columns: auto minmax(180px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.booking-history-search { min-width: 0; }
+.booking-history-search input { min-height: 48px; }
+#bookingHistoryPrintButton { white-space: nowrap; }
+.booking-history-table-wrapper { overflow-x: auto; }
+#bookingHistoryTable { width: 100%; min-width: 680px; }
+#bookingHistoryTable td { overflow-wrap: anywhere; }
+#bookingHistoryTable td:nth-child(2),
+#bookingHistoryTable td:nth-child(4),
+#bookingHistoryTable td:nth-child(5) { white-space: nowrap; }
+
+.booking-history-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    padding: 4px 0;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.booking-history-sort span { color: #64748b; }
+.booking-history-sort:hover,
+#bookingHistoryTable th[aria-sort="ascending"] .booking-history-sort,
+#bookingHistoryTable th[aria-sort="descending"] .booking-history-sort { color: #4f46e5; }
+.booking-history-sort:focus-visible { outline: 2px solid #6366f1; outline-offset: 4px; }
+.booking-history-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+.booking-history-pager, .booking-history-pages { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.booking-history-pages .btn { min-width: 34px; }
+.booking-history-pages [aria-current="page"] { background: #6366f1; border-color: #6366f1; color: #ffffff; }
+.booking-history-pages .booking-history-ellipsis { padding: 0 3px; color: #64748b; }
+.booking-history-print-only, .booking-history-print-heading { display: none; }
+
+@media screen and (max-width: 1150px) {
+    .booking-history-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+    #bookingHistoryHeading { grid-column: 1 / -1; }
+}
+
+@media screen and (max-width: 760px) {
+    .booking-history-toolbar { grid-template-columns: minmax(0, 1fr); }
+    #bookingHistoryPrintButton { white-space: normal; }
+}

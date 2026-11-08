@@ -1,0 +1,37 @@
+@model EZKLaundrySystem.Controllers.CustomerDashboardVM
+
+<div class="booking-history-print-only history-document-intro">
+    <header class="history-document-header">
+        <div class="history-document-brand">
+            <img src="~/images/ezk-laundry-logo.png" alt="EZ-K Laundry Services logo" />
+            <p>EZ-K Laundry Services</p>
+        </div>
+        <div class="history-document-title">
+            <p class="history-document-eyebrow">Customer records</p>
+            <h1>Booking History Report</h1>
+            <p>Customer booking details</p>
+        </div>
+    </header>
+
+    <dl class="history-document-metadata">
+        <div>
+            <dt>Report coverage</dt>
+            <dd id="bookingHistoryPrintScope">All bookings</dd>
+        </div>
+        <div class="history-document-generated">
+            <dt>Date generated</dt>
+            <dd id="bookingHistoryPrintDate"></dd>
+        </div>
+        <div class="history-document-customer">
+            <dt>Customer</dt>
+            <dd>@Model.FullName</dd>
+        </div>
+    </dl>
+
+    <div class="history-document-section-heading">
+        <h2>Booking details</h2>
+        <p>Records shown: <span id="bookingHistoryPrintCount">@Model.History.Count</span></p>
+    </div>
+    <p id="bookingHistoryPrintSort" class="history-document-note"></p>
+    <p class="history-document-note">Payment amounts are booking charges in Philippine pesos (PHP), not proof of payment.</p>
+</div>

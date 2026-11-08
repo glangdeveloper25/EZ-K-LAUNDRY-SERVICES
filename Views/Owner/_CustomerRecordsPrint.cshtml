@@ -1,0 +1,72 @@
+@model EZKLaundrySystem.Controllers.OwnerDashboardVM
+
+@{
+    var preparedBy = Context.Session.GetString("UserName");
+}
+
+@* The print document uses the same customer records as the dashboard table. *@
+<article id="customerRecordsDocument" aria-labelledby="customerRecordsDocumentTitle">
+    <header class="customer-document-header">
+        <div class="customer-document-brand">
+            <img src="~/images/ezk-laundry-logo.png" alt="EZ-K Laundry Services logo" />
+            <p>EZ-K Laundry Services</p>
+        </div>
+        <div class="customer-document-title">
+            <p class="customer-document-eyebrow">Business records</p>
+            <h1 id="customerRecordsDocumentTitle">Customer Records Report</h1>
+            <p>Customer contact information</p>
+        </div>
+    </header>
+
+    <dl class="customer-document-metadata">
+        <div>
+            <dt>Report coverage</dt>
+            <dd>All customer records</dd>
+        </div>
+        <div class="customer-document-generated">
+            <dt>Date generated</dt>
+            <dd id="customerRecordsPrintDate"></dd>
+        </div>
+        <div class="customer-document-prepared">
+            <dt>Prepared by</dt>
+            <dd id="customerRecordsPreparedBy">@(string.IsNullOrWhiteSpace(preparedBy) ? "Not available" : preparedBy.Trim())</dd>
+        </div>
+    </dl>
+
+    <div class="customer-document-section-heading">
+        <h2>Customer details</h2>
+        <p>Records shown: <span id="customerRecordsCount">@Model.CustomerList.Count</span></p>
+    </div>
+    <table class="customer-document-table" aria-label="Customer contact details">
+        <colgroup>
+            <col style="width:36%" />
+            <col style="width:40%" />
+            <col style="width:24%" />
+        </colgroup>
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Contact</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.CustomerList.Count == 0)
+            {
+                <tr><td colspan="3" class="customer-document-empty">No customer records available.</td></tr>
+            }
+            @foreach (var customer in Model.CustomerList)
+            {
+                <tr>
+                    <td>@(string.IsNullOrWhiteSpace(customer.FullName) ? "-" : customer.FullName)</td>
+                    <td>@(string.IsNullOrWhiteSpace(customer.Email) ? "-" : customer.Email)</td>
+                    <td>@(string.IsNullOrWhiteSpace(customer.ContactNumber) ? "-" : customer.ContactNumber)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <footer class="customer-document-footer">
+        <p>System-generated report of the customer records shown in the Owner portal.</p>
+        <p class="customer-document-end">End of report</p>
+    </footer>
+</article>

@@ -1,0 +1,154 @@
+﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EZ-K Laundry Services</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SWEETALERT2 PARA SA LOGIN/REGISTER NOTIFICATIONS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .navbar { background-color: white !important; border-bottom: 1px solid #e2e8f0; padding: 15px 0; }
+        .navbar-brand { font-size: 1.5rem; color: #1e293b !important; }
+        .nav-link { color: #64748b !important; font-weight: 500; margin: 0 10px; cursor: pointer; border: none; background: none; }
+        .nav-link:hover { color: #6366f1 !important; }
+        .btn-primary-ezk { background-color: #6366f1; border: none; color: white !important; padding: 10px 25px; border-radius: 8px; font-weight: 600; text-decoration: none; transition: 0.3s; }
+        .btn-primary-ezk:hover { background-color: #4f46e5; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
+
+        /* Modal Styling para sa Details */
+        .modal-content { border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .modal-header { border-bottom: 1px solid #f1f5f9; padding: 25px; }
+        .modal-body { padding: 30px; line-height: 1.8; color: #475569; text-align: justify; }
+        .highlight-blue { color: #6366f1; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    @{
+        // Kinukuha ang kasalukuyang UserRole sa session
+        var userRole = HttpContextAccessor.HttpContext?.Session?.GetString("UserRole");
+    }
+
+    <!-- HINDI LALABAS ANG HEADER KAPAG NAKA-LOGIN NA ANG CUSTOMER, STAFF, O OWNER -->
+    @if (string.IsNullOrEmpty(userRole))
+    {
+        <header>
+            <nav class="navbar navbar-expand-sm navbar-light shadow-sm">
+                <div class="container">
+                    <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
+                        <span style="color: #2b5a9e;">EZ-K</span> Laundry Services
+                    </a>
+                    <div class="collapse navbar-collapse justify-content-end">
+                        <ul class="navbar-nav align-items-center">
+                            <!-- CLICKABLE NAVBAR LINKS -->
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="modal" data-bs-target="#customerModal">For Customers</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="modal" data-bs-target="#partnerModal">Partner With Us</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="modal" data-bs-target="#faqModal">FAQS</button>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-primary-ezk ms-3" asp-controller="Account" asp-action="Login">Login / Register</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+
+    <main role="main">
+        @RenderBody() 
+    </main>
+
+    <!-- 1. MODAL: FOR CUSTOMERS (Details from your document) -->
+    <div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-people-fill me-2 text-primary"></i> For Our Customers</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>In the dynamic urban landscape of <span class="highlight-blue">General Santos City</span>, laundry shops like EZ-K serve students, professionals, and households who lack the time for chores. We are moving away from manual logbooks and printed receipts to a digital system.</p>
+                    <p>Our system addresses "pain points" like <span class="fw-bold text-dark">Data Integrity</span> (no more fake names) and <span class="fw-bold text-dark">Real-Time Tracking</span>. Since we do not offer delivery, this system allows you to know exactly when your laundry is "Ready for Pickup" to avoid unnecessary trips to our shop at CSA Building, Abdawa Street.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODAL: PARTNER WITH US (About the Business) -->
+    <div class="modal fade" id="partnerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-shop me-2 text-primary"></i> Partner With EZ-K</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><span class="highlight-blue">EZ-K Laundry Services</span> is a micro-business operating on the ground floor of CSA Building, Barangay Dadiangas North. We are automating our records to improve operational efficiency and transparency.</p>
+                    <p>By implementing a centralized online system, we aim to eliminate errors in customer data and lost documents. Our goal is to present a dynamic interface for billing, including "Rush" order prioritization and a product section for multiple add-ons like detergents and fabric softeners.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL: FAQS -->
+    <div class="modal fade" id="faqModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-question-circle-fill me-2 text-primary"></i> Frequently Asked Questions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-dark">How do you handle Rush Orders?</h6>
+                        <p>Our system automates the queue to prioritize rush orders, which was difficult to manage manually.</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-dark">Is the price fixed during booking?</h6>
+                        <p>No. Our billing is now dynamic. The final price accounts for the actual weight and extra items determined once the laundry is dropped off at the shop.</p>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-dark">Do you have SMS notifications?</h6>
+                        <p>Yes. Our staff-initiated SMS system notifies you strictly when the laundry is ready for pickup or if there are system downtimes like power outages.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION SCRIPT (SWEETALERT2) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var msg = "@TempData["Msg"]";
+            var type = "@TempData["Type"]";
+            if (msg) {
+                Swal.fire({
+                    icon: type, 
+                    title: type === 'success' ? 'Success!' : 'Notice',
+                    text: msg,
+                    confirmButtonColor: '#6366f1',
+                    timer: 4000
+                });
+            }
+        });
+    </script>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

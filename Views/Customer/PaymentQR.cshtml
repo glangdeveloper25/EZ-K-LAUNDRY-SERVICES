@@ -1,0 +1,47 @@
+@model EZKLaundrySystem.Controllers.BookingReviewVM
+@{ Layout = "_Layout"; }
+
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 90vh;">
+    <div class="card p-5 shadow border-0 text-center" style="max-width: 450px; border-radius: 20px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/GCash_logo.svg/1200px-GCash_logo.svg.png" width="150" class="mb-4">
+        <h4 class="fw-bold">GCash Payment</h4>
+        <p class="text-muted small mb-2">Pay the estimated order total using GCash. Staff will manually verify the payment before it is recorded as paid.</p>
+        @if (Model.UseReward)
+        {
+            <div class="d-flex justify-content-between small mb-2">
+                <span>Subtotal</span><span>&#8369;@Model.Subtotal.ToString("N2")</span>
+            </div>
+            <div class="d-flex justify-content-between small text-success mb-2">
+                <span>Rewards discount (100 points)</span><span>-&#8369;@Model.RewardDiscount.ToString("N2")</span>
+            </div>
+        }
+        <div class="d-flex justify-content-between small mb-2">
+            <span>Estimated order total</span><span>&#8369;@Model.EstimatedTotal.ToString("N2")</span>
+        </div>
+        <div class="bg-light border rounded-3 py-2 px-3 mb-2">
+            <small class="text-muted d-block">Estimated amount to pay</small>
+            <strong class="text-primary fs-5">₱@Model.GCashAmount.ToString("N2")</strong>
+        </div>
+        
+        <!-- QR CODE IMAGE (PDF Page 8) -->
+        <div class="my-4 p-3 border rounded-3 bg-light d-inline-block">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=EZKLaundryPayment" class="img-fluid" style="filter: blur(0.5px);">
+        </div>
+
+        @if (Model.UseReward)
+        {
+            <p class="small text-muted">Submitting the payment confirmation below finalizes your booking and deducts 100 points. Points are checked again when you confirm; they are not reserved yet. Payment still requires Staff verification.</p>
+        }
+
+        <form asp-action="ConfirmGCashPayment" method="post">
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold" style="background-color: #6366f1; border-radius: 12px;">
+                I've Made My Payment
+            </button>
+        </form>
+
+        <a asp-action="ReviewBooking" class="btn btn-link mt-2 text-muted text-decoration-none small d-block">Back to order review</a>
+        <form asp-action="CancelBookingDraft" method="post">
+            <button type="submit" class="btn btn-link text-danger text-decoration-none small">Cancel booking and go back</button>
+        </form>
+    </div>
+</div>

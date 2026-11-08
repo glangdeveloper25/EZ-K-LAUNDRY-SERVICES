@@ -1,0 +1,145 @@
+@model EZKLaundrySystem.Controllers.BookingReviewVM
+@{ Layout = "_Layout"; }
+
+<style>
+    body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    .review-shell { max-width: 760px; margin: 45px auto; }
+    .review-card { background: white; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); overflow: hidden; }
+    .review-header { padding: 28px 30px; border-bottom: 1px solid #e2e8f0; }
+    .review-body { padding: 28px 30px; }
+    .review-line { display: flex; justify-content: space-between; gap: 20px; padding: 15px 0; border-bottom: 1px solid #f1f5f9; }
+    .btn-confirm { background: #6366f1; color: white; border: 0; border-radius: 10px; padding: 13px 20px; font-weight: 700; }
+    .btn-edit { background: white; color: #334155; border: 1px solid #cbd5e1; border-radius: 10px; padding: 13px 20px; font-weight: 700; text-decoration: none; text-align: center; }
+</style>
+
+<div class="container review-shell">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold mb-2">Review Your Order</h2>
+        <p class="text-muted mb-0">Please check the details before continuing.</p>
+    </div>
+
+    @if (TempData["Msg"] is string message)
+    {
+        <div class="alert @(TempData["Type"]?.ToString() == "error" ? "alert-danger" : "alert-info")" role="alert">@message</div>
+    }
+
+    <div class="review-card">
+        <div class="review-header d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-muted fw-bold">ORDER SUMMARY</small>
+                <h5 class="fw-bold mb-0 mt-1">Selected Laundry Services</h5>
+            </div>
+            <span class="badge bg-primary rounded-pill px-3 py-2">@Model.PaymentMethod</span>
+        </div>
+
+        <div class="review-body">
+            <div class="p-3 bg-light rounded-3 mb-3">
+                <span class="text-muted small fw-bold">SERVICE METHOD</span>
+                <div class="fw-bold">@(Model.ServiceMode == "Self Service" ? "Self-Service (DIY)" : "Full-Service")</div>
+            </div>
+            @foreach (var service in Model.Services)
+            {
+                <div class="review-line">
+                    <div>
+                        <div class="fw-bold">@service.ServiceName</div>
+                        <small class="text-muted">
+                            @if (service.ChargingBasis == "PerKg")
+                            {
+                                <span>@service.Quantity.ToString("0.##") kg × ₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                            else if (service.ChargingBasis == "PerLoad")
+                            {
+                                <span>@service.Quantity.ToString("0.##") @(service.Quantity == 1 ? "load" : "loads") × ₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                            else if (service.ChargingBasis == "PerItem")
+                            {
+                                <span>@service.Quantity.ToString("0.##") @(service.Quantity == 1 ? "piece" : "pieces") × ₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                            else
+                            {
+                                <span>₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                        </small>
+                    </div>
+                    <div class="fw-bold">₱@service.LineTotal.ToString("N2")</div>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.SupplyInstructions))
+            {
+                <div class="p-3 bg-light rounded-3 mt-3">
+                    <h6 class="fw-bold mb-2">Detergent &amp; fabric softener</h6>
+                    <p class="small mb-0" style="white-space: pre-line;">@Model.SupplyInstructions</p>
+                </div>
+            }
+
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3">
+                        <small class="text-muted d-block">Estimated Weight</small>
+                        <span class="fw-bold">@Model.Weight.ToString("0.##") kg</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3">
+                        <small class="text-muted d-block">Payment Method</small>
+                        <span class="fw-bold">@(Model.PaymentMethod == "Cash" ? "Cash on Pickup" : Model.PaymentMethod)</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.UseReward)
+            {
+                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                    <span>Subtotal</span><span>&#8369;@Model.Subtotal.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mt-2 text-success">
+                    <span>Rewards discount (100 points)</span><span>-&#8369;@Model.RewardDiscount.ToString("N2")</span>
+                </div>
+                <p class="small text-muted mt-2 mb-0">100 points will be deducted only when your booking is finally confirmed. This discount has not been redeemed yet.</p>
+            }
+
+            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top text-primary">
+                <h5 class="fw-bold mb-0">Estimated Total</h5>
+                <h3 class="fw-bold mb-0">₱@Model.EstimatedTotal.ToString("N2")</h3>
+            </div>
+            @if (Model.GCashAmount > 0m)
+            {
+                <div class="d-flex justify-content-between mt-3">
+                    <span>Estimated GCash amount</span><strong>₱@Model.GCashAmount.ToString("N2")</strong>
+                </div>
+            }
+
+            @if (Model.ScheduledAt is DateTime scheduledAt)
+            {
+                <div class="alert alert-primary border-0 small mt-4 mb-0">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    Drop-off schedule: <strong>@scheduledAt.ToString("dddd, MMM dd, h:mm tt")</strong>.
+                    Please arrive within @EZKLaundrySystem.Data.BookingSchedule.GraceMinutes minutes, or the booking will be cancelled automatically.
+                </div>
+            }
+
+            <div class="alert alert-warning border-0 small mt-3 mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                The final amount may change if the actual laundry weight is different.
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+        <div class="col-md-4">
+            <a asp-action="Book" asp-route-edit="true" class="btn-edit d-block w-100">Edit Order</a>
+        </div>
+        <div class="col-md-8">
+            <form asp-action="ConfirmReviewedBooking" method="post">
+                <button type="submit" class="btn-confirm w-100">
+                    @(Model.PaymentMethod == "GCash" && Model.EstimatedTotal > 0m ? "Confirm and Continue to Payment" : "Confirm Booking")
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <form asp-action="CancelBookingDraft" method="post" class="text-center mt-3">
+        <button type="submit" class="btn btn-link text-muted text-decoration-none">Cancel Booking</button>
+    </form>
+</div>

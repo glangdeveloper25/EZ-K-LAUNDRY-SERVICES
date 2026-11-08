@@ -1,0 +1,1275 @@
+@model EZKLaundrySystem.Controllers.CustomerDashboardVM
+@using Microsoft.AspNetCore.Http
+@{
+    Layout = "_Layout";
+    string draftWeight = Model.DraftWeight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    bool isHome = Model.Page == EZKLaundrySystem.Controllers.CustomerController.HomePage;
+    string SectionClass(string page) => Model.Page == page ? "active-section" : "";
+}
+
+<style>
+    body { min-height: 100vh; background: linear-gradient(180deg, #e0ecff 0, #f7f9fc 340px) no-repeat, #f7f9fc; font-family: 'Inter', sans-serif; }
+    .customer-shell { max-width: 1080px; margin: 0 auto; padding-left: 18px; padding-right: 18px; }
+    .customer-topbar { padding: 18px 0 6px; }
+    .customer-logo { height: 38px; width: auto; }
+    .main-content { padding-top: 18px; padding-bottom: 40px; }
+    .back-home { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; padding: 7px 14px; border-radius: 999px; background: #fff; color: #2563eb; font-weight: 700; font-size: .88rem; text-decoration: none; box-shadow: 0 4px 12px rgba(15,23,42,.06); }
+    .back-home:hover { background: #eff6ff; }
+    .top-nav { display: flex; align-items: center; gap: 8px; }
+    .top-nav-btn { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; color: #334155; font-size: .85rem; font-weight: 600; text-decoration: none; box-shadow: 0 4px 12px rgba(15,23,42,.06); }
+    .top-nav-btn i { color: #4f46e5; font-size: 1.05rem; }
+    .top-nav-btn:hover, .top-nav-btn.active { background: #eef2ff; color: #2563eb; }
+    .top-nav-btn.round { width: 40px; padding: 0; justify-content: center; }
+    .top-nav-btn.account-btn { padding-left: 6px; }
+    .top-nav-btn .top-nav-caret { color: #64748b; font-size: .72rem; }
+    .top-nav-badge { position: absolute; top: -5px; right: -5px; padding: 1px 6px; border-radius: 999px; background: #f43f5e; color: #fff; font-size: .62rem; font-weight: 700; }
+    .top-nav-avatar { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #4f46e5; color: #fff; font-size: .78rem; font-weight: 700; }
+    .account-menu { width: 240px; padding: 8px; border: 0; border-radius: 14px; box-shadow: 0 16px 36px rgba(15,23,42,.16); }
+    .account-menu-who { padding: 8px 12px 10px; border-bottom: 1px solid #eef2f7; margin-bottom: 6px; }
+    .account-menu .dropdown-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: .88rem; font-weight: 600; }
+    .account-menu .dropdown-item:hover { background: #f1f5ff; }
+    @@media (max-width: 575.98px) {
+        .top-nav-text { display: none; }
+        .top-nav-btn { width: 40px; padding: 0; justify-content: center; }
+        .top-nav-btn .top-nav-caret { display: none; }
+    }
+
+    /* Customer home */
+    .home-greeting { color: #10203b; font-size: 1.45rem; letter-spacing: -.02em; }
+    .home-tier { color: #64748b; font-size: .88rem; }
+    .home-points { height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 18px 20px; border-radius: 18px; background: #fff; color: #10203b; text-decoration: none; box-shadow: 0 8px 20px rgba(15,23,42,.06); }
+    .home-points strong { font-size: 1.5rem; }
+    .home-points-link { margin-top: 8px; color: #2563eb; font-size: .84rem; font-weight: 700; }
+    .home-book { height: 100%; min-height: 120px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 18px; color: #fff; font-size: 1.2rem; font-weight: 800; text-decoration: none; background: linear-gradient(120deg, #2563eb, #6366f1); box-shadow: 0 14px 28px rgba(37,99,235,.3); transition: transform .15s ease; }
+    .home-book i { font-size: 1.6rem; }
+    .home-book:hover { color: #fff; transform: translateY(-2px); }
+    .home-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .home-actions a { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 10px; border-radius: 18px; background: #fff; color: #10203b; font-size: .9rem; font-weight: 700; text-decoration: none; text-align: center; box-shadow: 0 6px 14px rgba(15,23,42,.06); transition: transform .15s ease; }
+    .home-actions a:hover { transform: translateY(-2px); }
+    .home-actions small { color: #64748b; font-size: .75rem; font-weight: 500; }
+    .home-action-icon { position: relative; width: 54px; height: 54px; display: grid; place-items: center; margin-bottom: 4px; border-radius: 16px; background: #eef2ff; color: #4f46e5; font-size: 1.4rem; }
+    .home-action-badge { position: absolute; top: -6px; right: -6px; padding: 2px 7px; border-radius: 999px; background: #f43f5e; color: #fff; font-size: .68rem; font-weight: 700; }
+    .home-label { color: #64748b; font-size: .74rem; font-weight: 800; letter-spacing: .05em; }
+    .order-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 14px; border-bottom: 1px solid #dbe5f2; }
+    .order-tab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 0; border-bottom: 3px solid transparent; background: none; color: #475569; font-weight: 600; font-size: .92rem; white-space: nowrap; }
+    .order-tab-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: #e2e8f0; color: #475569; font-size: .72rem; font-weight: 700; }
+    .order-tab.active .order-tab-count { background: #2563eb; color: #fff; }
+    .order-tab:hover { color: #2563eb; background: rgba(37,99,235,.05); border-radius: 8px 8px 0 0; }
+    .order-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .order-tab.active small { color: #2563eb; }
+    .order-tab-dot { width: 8px; height: 8px; border-radius: 50%; background: #2563eb; }
+    .order-tab-dot.pending { background: #f59e0b; }
+    .order-tab-dot.ready { background: #16a34a; }
+    .live-track { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 18px; text-align: center; }
+    .live-step { position: relative; color: #94a3b8; font-size: .8rem; font-weight: 600; }
+    .live-step:not(:last-child)::after { content: ''; position: absolute; top: 22px; left: 50%; width: 100%; height: 3px; background: #e2e8f0; }
+    .live-step-icon { position: relative; z-index: 1; width: 46px; height: 46px; display: grid; place-items: center; margin: 0 auto 8px; border: 2px solid #e2e8f0; border-radius: 50%; background: #f1f5f9; font-size: 1.15rem; }
+    .live-step-note { display: block; margin-top: 2px; font-size: .7rem; font-weight: 500; }
+    .live-step.done { color: #10203b; }
+    .live-step.done .live-step-icon { border-color: #6366f1; background: #eef2ff; color: #6366f1; }
+    .live-step.done::after { background: #6366f1; }
+    .live-step.now { color: #2563eb; font-weight: 800; }
+    .live-step.now .live-step-icon { border-color: #2563eb; background: #2563eb; color: #fff; box-shadow: 0 0 0 6px rgba(37,99,235,.15); }
+    .live-step.done:last-child .live-step-icon { border-color: #16a34a; background: #16a34a; color: #fff; }
+    .live-step.done:last-child { color: #16a34a; }
+    @@media (max-width: 575.98px) {
+        .home-actions { gap: 10px; }
+        .home-actions small { display: none; }
+        .live-step { font-size: .7rem; }
+    }
+    .card-custom { background: white; border-radius: 16px; border: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 20px; }
+
+    /* Customer dashboard */
+    .dashboard-welcome { position: relative; overflow: hidden; padding: 18px 22px 8px; margin: -8px -8px 24px; border-radius: 22px; background: linear-gradient(120deg, rgba(239,246,255,.9), rgba(255,255,255,.55) 62%, rgba(224,231,255,.8)); }
+    .dashboard-welcome::after { content: ''; position: absolute; width: 190px; height: 190px; right: -60px; top: -95px; border-radius: 50%; background: rgba(96,165,250,.12); }
+    .dashboard-greeting { color: #0f2142; font-size: clamp(1.55rem, 2.2vw, 2.15rem); letter-spacing: -.03em; }
+    .customer-tier { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 10px; font-size: .9rem; font-weight: 700; }
+    .customer-tier.regular { background: #fbbf24; color: #172033; }
+    .customer-tier.new { background: #e2e8f0; color: #334155; }
+    .dashboard-stat { position: relative; overflow: hidden; min-height: 132px; display: flex; align-items: center; gap: 18px; padding: 22px; border: 1px solid rgba(226,232,240,.85); box-shadow: 0 10px 26px rgba(15,23,42,.06); }
+    .dashboard-stat::after { content: ''; position: absolute; width: 180px; height: 85px; right: -24px; bottom: -34px; border-radius: 50%; background: var(--stat-soft); transform: rotate(-8deg); }
+    .stat-icon { width: 62px; height: 62px; flex: 0 0 62px; display: grid; place-items: center; border-radius: 50%; font-size: 1.65rem; color: var(--stat-color); background: var(--stat-soft); }
+    .stat-content { position: relative; z-index: 1; }
+    .stat-label { color: #475569; font-size: .74rem; font-weight: 800; letter-spacing: .035em; }
+    .stat-number { margin: 4px 0 0; color: #10203b; font-size: 2rem; font-weight: 800; line-height: 1; }
+    .stat-orders { --stat-color: #2563eb; --stat-soft: #dbeafe; }
+    .stat-finished { --stat-color: #6366f1; --stat-soft: #e8e7ff; }
+    .stat-points { --stat-color: #059669; --stat-soft: #d1fae5; }
+    .tracking-panel { padding: 28px; border: 1px solid rgba(226,232,240,.85); box-shadow: 0 12px 30px rgba(15,23,42,.055); }
+    .section-title { display: flex; align-items: center; gap: 12px; color: #10203b; font-size: 1.25rem; }
+    .section-title::before { content: ''; width: 8px; height: 34px; border-radius: 999px; background: linear-gradient(#2563eb, #6366f1); }
+    
+    /* Service Cards Styling */
+    .service-card { border: 2px solid #f1f5f9; border-radius: 15px; padding: 20px; cursor: pointer; transition: 0.3s; text-align: center; }
+    .service-card:hover { border-color: #6366f1; background-color: #f0f7ff; }
+    .service-card.active { border-color: #6366f1; background-color: #eff6ff; border-width: 2px; }
+    .service-card.unavailable { opacity: 0.55; cursor: not-allowed; background-color: #f8fafc; }
+    .service-card.unavailable:hover { border-color: #f1f5f9; background-color: #f8fafc; }
+    .addon-card { border: 2px solid #f1f5f9; border-radius: 14px; padding: 16px; height: 100%; transition: 0.2s; background: #ffffff; }
+    .addon-card:has(.form-check-input:checked), .addon-card.active { border-color: #6366f1; background-color: #eff6ff; }
+    .addon-card.customer-supply { border-color: #86efac; background-color: #f0fdf4; }
+    .addon-price { color: #2563eb; font-weight: 600; font-size: 0.85rem; }
+
+    /* Stepper Styling */
+    .step-item { text-align: center; position: relative; flex: 1; }
+    .step-icon { width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; z-index: 2; position: relative; }
+    .step-item.active .step-icon { background: #6366f1; color: white; }
+    .step-line { position: absolute; top: 20px; left: 50%; width: 100%; height: 2px; background: #e2e8f0; z-index: 1; }
+    .tracking-card { height: 100%; padding: 22px; border: 1px solid #dbe5f2; border-radius: 16px; background: white; box-shadow: 0 5px 16px rgba(15, 23, 42, 0.045); transition: transform .2s ease, box-shadow .2s ease; }
+    .tracking-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,23,42,.075); }
+    .order-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .order-heading-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 50%; color: #475569; background: #f1f5f9; }
+    .order-heading h6 { font-size: .9rem; }
+    .tracking-card .badge { font-size: .72rem; }
+    .tracking-card .alert { font-size: .82rem !important; }
+    .tracking-card .step-icon { width: 36px; height: 36px; margin-bottom: 7px; }
+    .tracking-card .step-line { top: 18px; }
+    .tracking-card .step-item small { display: block; position: relative; z-index: 2; min-height: 32px; padding: 0 4px; font-size: .72rem; line-height: 1.25; background: #fff; }
+
+    /* Badges & Notification */
+    .badge-completed { background: #dcfce7; color: #16a34a; padding: 5px 12px; border-radius: 20px; font-size: 11px; }
+    .badge-cancelled { background: #fee2e2; color: #ef4444; padding: 5px 12px; border-radius: 20px; font-size: 11px; }
+    .notify-card { border-left: 4px solid #6366f1; background: #f0f4ff; padding: 20px; border-radius: 12px; margin-bottom: 15px; }
+    .notify-card.points { border-left-color: #facc15; background: #fffbeb; }
+    .notify-card.welcome { border-left-color: #22c55e; background: #f0fdf4; }
+    .notify-card.payment { border-left-color: #16a34a; background: #f0fdf4; }
+    .notify-card.read { opacity: 0.72; background: #ffffff; border-left-color: #cbd5e1; }
+
+    .customer-section { display: none; }
+    .active-section { display: block; }
+    .btn-ezk { background-color: #6366f1; color: white !important; border-radius: 10px; font-weight: 600; border: none; padding: 12px 25px; transition: 0.3s; }
+    #sec-reward .btn-ezk:disabled { background-color: #6366f1; color: white !important; opacity: 0.65; }
+    @@media (max-width: 991.98px) {
+        .main-content { padding: 28px 24px; }
+        .dashboard-stat { min-height: 125px; }
+    }
+
+    /* Drop-off schedule: date cards, then the time slots of the chosen date */
+    .ds-step { font-size: .78rem; font-weight: 700; color: #64748b; letter-spacing: .03em; margin: 12px 0 8px; }
+    .ds-days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .ds-day { flex: 1 0 74px; border: 2px solid #e2e8f0; background: #fff; border-radius: 12px; padding: 8px 4px; text-align: center; color: #10203b; }
+    .ds-day span { display: block; }
+    .ds-day .dw, .ds-day .dm { font-size: .72rem; color: #64748b; }
+    .ds-day .dw { font-weight: 700; text-transform: uppercase; }
+    .ds-day .dn { font-size: 1.35rem; font-weight: 800; line-height: 1.1; }
+    .ds-day .dl { font-size: .68rem; font-weight: 700; color: #15803d; margin-top: 2px; }
+    .ds-day.on { border-color: #6366f1; background: #eef2ff; }
+    .ds-day.on .dw, .ds-day.on .dm { color: #4f46e5; }
+    .ds-day:disabled { background: #f1f5f9; cursor: not-allowed; }
+    .ds-day:disabled .dn, .ds-day:disabled .dl { color: #94a3b8; }
+    .ds-times { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .ds-time { border: 2px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; padding: 8px 6px; text-align: center; color: #10203b; }
+    .ds-time b { display: block; font-size: .95rem; }
+    .ds-time small { font-size: .72rem; font-weight: 700; color: #15803d; }
+    .ds-time.on { border-color: #16a34a; background: #16a34a; color: #fff; }
+    .ds-time.on small { color: #dcfce7; }
+    .ds-time:disabled { border-color: #e2e8f0; background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+    .ds-time:disabled small { color: #94a3b8; }
+    .ds-chosen { margin-top: 12px; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 8px 12px; font-size: .88rem; }
+    @@media (max-width: 575.98px) {
+        .ds-times { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Booking page: one column of numbered steps with the estimated total in a bar at the bottom */
+    .bk-wrap { max-width: 780px; margin: 0 auto; }
+    .bk-step { background: #fff; border-radius: 16px; padding: 20px 22px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
+    .bk-step-h { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .bk-step-h h5 { margin: 0; font-weight: 700; font-size: 1.02rem; }
+    .bk-step-h small { color: #64748b; margin-left: auto; font-size: .8rem; }
+    .bk-num { width: 28px; height: 28px; border-radius: 50%; background: #6366f1; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: .85rem; flex: 0 0 28px; }
+    .bk-num-gift { background: #f59e0b; }
+    .bk-sub { font-size: .8rem; font-weight: 700; color: #64748b; margin-bottom: 8px; }
+    .bk-hint { color: #64748b; font-size: .82rem; }
+    .bk-choice { position: relative; display: block; height: 100%; border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; background: #fff; cursor: pointer; transition: .15s; }
+    .bk-choice:hover { border-color: #a5b4fc; }
+    .bk-choice:has(input:checked) { border-color: #6366f1; background: #eef2ff; }
+    .bk-choice:has(input:checked)::after { content: '\F26A'; font-family: 'bootstrap-icons'; position: absolute; top: 12px; right: 14px; color: #6366f1; font-size: 1.15rem; }
+    .bk-choice:has(input:focus-visible) { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+    .bk-choice > span { display: block; }
+    .bk-choice .t { font-weight: 700; font-size: 1rem; padding-right: 24px; }
+    .bk-choice .p { color: #6366f1; font-weight: 800; }
+    .bk-choice .p .u { display: inline; color: #64748b; font-weight: 400; font-size: .85rem; }
+    .bk-choice .d { color: #64748b; font-size: .84rem; }
+    .bk-chips { display: flex !important; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .bk-chips span { font-size: .74rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #fff; border: 1px solid #c7d2fe; color: #4338ca; }
+    .bk-chips.muted span { border-color: #e2e8f0; color: #64748b; }
+    .bk-toggle { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .bk-toggle i { font-size: 1.4rem; color: #6366f1; }
+    .bk-toggle small { color: #64748b; }
+    .bk-kg { display: flex; align-items: center; border: 2px solid #c7d2fe; border-radius: 14px; overflow: hidden; background: #fff; }
+    .bk-kg button { width: 52px; align-self: stretch; border: 0; background: #eef2ff; font-size: 1.4rem; font-weight: 800; color: #4f46e5; }
+    .bk-kg button:hover { background: #e0e7ff; }
+    .bk-kg input { width: 92px; border: 0; text-align: right; font-size: 1.6rem; font-weight: 800; padding: 6px 4px; color: #10203b; }
+    .bk-kg input:focus { outline: none; }
+    .bk-kg:focus-within { border-color: #6366f1; }
+    .bk-kg > span { color: #64748b; font-weight: 700; padding: 0 12px 0 4px; }
+    .bk-eq { font-size: 1.4rem; color: #94a3b8; font-weight: 800; }
+    .bk-loads { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 14px; padding: 6px 18px; text-align: center; }
+    .bk-loads b { font-size: 1.6rem; color: #15803d; display: block; line-height: 1.1; }
+    .bk-loads span { font-size: .78rem; color: #15803d; font-weight: 700; }
+    .bk-seg { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; }
+    .bk-seg label { flex: 1; margin: 0; cursor: pointer; }
+    .bk-seg span { display: block; text-align: center; padding: 9px 6px; border-radius: 9px; font-weight: 700; color: #64748b; font-size: .88rem; }
+    .bk-seg input:checked + span { background: #fff; color: #10203b; box-shadow: 0 2px 6px rgba(15,23,42,.08); }
+    .bk-seg input:focus-visible + span { outline: 3px solid #a5b4fc; }
+    .bk-row { display: flex !important; align-items: center; justify-content: space-between; gap: 12px; height: auto !important; padding: 12px 14px !important; cursor: pointer; }
+    .bk-row b, .bk-row small { display: block; }
+    .bk-row small { color: #64748b; font-size: .8rem; }
+    .bk-row .form-switch .form-check-input { width: 2.6em; height: 1.4em; cursor: pointer; }
+    .bk-rush { min-width: 200px; align-self: stretch; }
+    .bk-rush[hidden] { display: none !important; }
+    .bk-bar { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #fff; border-radius: 16px 16px 0 0; padding: 12px 20px; box-shadow: 0 -6px 20px rgba(15,23,42,.10); border: 1px solid #e2e8f0; border-bottom: 0; }
+    .bk-bar-l { font-size: .76rem; color: #64748b; }
+    .bk-bar-t span { font-size: 1.45rem; font-weight: 800; color: #6366f1; }
+    .bk-bar-t small { font-size: .72rem; color: #64748b; margin-left: 6px; }
+    @@media (max-width: 575.98px) {
+        .bk-step { padding: 16px; }
+        .bk-bar-t small { display: block; margin-left: 0; }
+    }
+</style>
+<link rel="stylesheet" href="~/css/customer-history.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/customer-history-print.css" asp-append-version="true" />
+
+<!-- TOP BAR (customer side has no sidebar) -->
+<header class="customer-topbar">
+    <div class="customer-shell d-flex justify-content-between align-items-center">
+        <a asp-action="Index" aria-label="EZ-K Laundry home"><img src="~/images/ezk-laundry-logo.png" asp-append-version="true" alt="EZ-K Laundry Services" class="customer-logo" /></a>
+        <nav class="top-nav" aria-label="Customer menu">
+            <a asp-action="Orders" class="top-nav-btn @(Model.Page == EZKLaundrySystem.Controllers.CustomerController.OrdersPage ? "active" : "")">
+                <i class="bi bi-receipt"></i><span class="top-nav-text">My Orders</span>
+            </a>
+            <a asp-action="Notifications" class="top-nav-btn round @(Model.Page == EZKLaundrySystem.Controllers.CustomerController.NotificationsPage ? "active" : "")"
+               aria-label="Notifications@(Model.UnreadNotificationCount > 0 ? $", {Model.UnreadNotificationCount} unread" : "")">
+                <i class="bi bi-bell-fill"></i>
+                @if (Model.UnreadNotificationCount > 0)
+                {
+                    <span class="top-nav-badge">@Model.UnreadNotificationCount</span>
+                }
+            </a>
+            <div class="dropdown">
+                <button type="button" class="top-nav-btn account-btn @(Model.Page == EZKLaundrySystem.Controllers.CustomerController.AccountPage ? "active" : "")"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="top-nav-avatar">@(string.IsNullOrEmpty(Model.FullName) ? "?" : Model.FullName.Trim()[0].ToString().ToUpperInvariant())</span>
+                    <span class="top-nav-text">Account</span>
+                    <i class="bi bi-chevron-down top-nav-caret"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end account-menu">
+                    <div class="account-menu-who">
+                        <div class="fw-bold text-truncate">@Model.FullName</div>
+                        <small class="text-muted text-truncate d-block">@Model.Email</small>
+                    </div>
+                    <a asp-action="Account" class="dropdown-item"><i class="bi bi-person-gear"></i>Account Settings</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="/Account/Logout" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i>Logout</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<!-- MAIN CONTENT -->
+<div class="customer-shell main-content">
+
+    @if (!isHome)
+    {
+        <a asp-action="Index" class="back-home"><i class="bi bi-arrow-left"></i> Back to Home</a>
+    }
+
+    @if (TempData["Message"] != null) {
+        <div class="alert alert-primary border-0 shadow-sm mb-4" style="background-color: #6366f1; color: white;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+        </div>
+    }
+
+    <!-- 1. HOME -->
+    <div id="sec-dash" class="customer-section @(isHome ? "active-section" : "")">
+        @{
+            int completedOrders = Model.History.Count(booking => booking.Status == "Completed");
+            string category = EZKLaundrySystem.Data.CustomerCategory.Classify(completedOrders);
+            int ordersToGo = EZKLaundrySystem.Data.CustomerCategory.OrdersUntilRegular(completedOrders);        }
+        <h2 class="home-greeting fw-bold mb-1">Welcome, ka-labada! 👋</h2>
+        @if (category == EZKLaundrySystem.Data.CustomerCategory.Regular)
+        {
+            <p class="home-tier mb-3"><i class="bi bi-star-fill text-warning me-1"></i>Regular Customer · your bookings get priority in the queue</p>
+        }
+        else
+        {
+            <p class="home-tier mb-3"><i class="bi bi-person-fill me-1"></i>New Customer · complete @ordersToGo more order(s) to become a Regular Customer</p>
+        }
+
+        @{
+            // Show the latest downtime notice from the last 24 hours prominently.
+            var downtimeNotice = Model.Notifications
+                .Where(n => n.Title == EZKLaundrySystem.Controllers.StaffController.DowntimeNoticeTitle && n.SentAt > DateTime.Now.AddHours(-24))
+                .OrderByDescending(n => n.SentAt)
+                .FirstOrDefault();
+        }
+        @if (downtimeNotice != null)
+        {
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3 mb-4" role="alert">
+                <i class="bi bi-lightning-charge-fill fs-4"></i>
+                <div>
+                    <div class="fw-bold">Shop Downtime Notice <span class="fw-normal small text-muted ms-1">@downtimeNotice.TimeAgo</span></div>
+                    <div>@downtimeNotice.Message</div>
+                </div>
+            </div>
+        }
+
+        <div class="row g-3 mb-4 align-items-stretch">
+            <div class="col-md-4">
+                <a asp-action="Rewards" class="home-points">
+                    <small class="text-muted">EZ-K Points</small>
+                    <strong>@(Model.Rewards.IsReady ? Model.Rewards.Balance.ToString("N0") : "—")</strong>
+                    @if (Model.Rewards.CanRedeem)
+                    {
+                        <small class="text-success fw-bold">You can redeem a discount!</small>
+                    }
+                    else if (Model.Rewards.IsReady)
+                    {
+                        <small class="text-muted">@((100L - Model.Rewards.Balance).ToString("N0")) more points to redeem</small>
+                    }
+                    <span class="home-points-link"><i class="bi bi-star-fill text-warning me-1"></i>View Rewards <i class="bi bi-arrow-right"></i></span>
+                </a>
+            </div>
+            <div class="col-md-8">
+                <a asp-action="Book" class="home-book">
+                    <i class="bi bi-basket2-fill"></i> Book Laundry Now
+                </a>
+            </div>
+        </div>
+
+        <div class="home-label mb-2">LIVE TRACKING</div>
+        @if (Model.ActiveBookings.Count == 0)
+        {
+            <div class="tracking-card text-center text-muted py-4">
+                <i class="bi bi-basket2 fs-2 d-block mb-2"></i>
+                No active laundry yet. Tap <strong>Book Laundry Now</strong> to start.
+            </div>
+        }
+        @if (Model.ActiveBookings.Count > 0)
+        {
+            // Two tabs, like Classroom's Stream / Classwork: Pending orders together, orders being worked on together.
+            var pendingBookings = Model.ActiveBookings.Where(b => b.Status == "Pending").ToList();
+            var workingBookings = Model.ActiveBookings.Where(b => b.Status != "Pending").ToList();
+            bool openWorking = workingBookings.Count > 0;
+            var steps = new[]
+            {
+                (Name: "Washing", Icon: "bi-droplet-half"),
+                (Name: "Drying", Icon: "bi-wind"),
+                (Name: "Folding", Icon: "bi-layers"),
+                (Name: "Ready for Pickup", Icon: "bi-bag-check-fill")
+            };
+
+            <div class="order-tabs" role="tablist" aria-label="Your orders">
+                <button type="button" class="order-tab @(openWorking ? "active" : "")" role="tab" id="order-tab-working"
+                        aria-controls="order-panel-working" aria-selected="@(openWorking ? "true" : "false")" onclick="showOrderTab('working')">
+                    <span class="order-tab-dot"></span>In Progress <span class="order-tab-count">@workingBookings.Count</span>
+                </button>
+                <button type="button" class="order-tab @(!openWorking ? "active" : "")" role="tab" id="order-tab-pending"
+                        aria-controls="order-panel-pending" aria-selected="@(!openWorking ? "true" : "false")" onclick="showOrderTab('pending')">
+                    <span class="order-tab-dot pending"></span>Pending <span class="order-tab-count">@pendingBookings.Count</span>
+                </button>
+            </div>
+
+            <div class="order-panel" id="order-panel-working" role="tabpanel" aria-labelledby="order-tab-working" hidden="@(!openWorking ? "hidden" : null)">
+                @if (workingBookings.Count == 0)
+                {
+                    <div class="tracking-card text-center text-muted py-4">
+                        <i class="bi bi-hourglass fs-2 d-block mb-2"></i>
+                        No laundry in progress yet. Once the staff accepts your booking, you can track it here.
+                    </div>
+                }
+                @foreach (var booking in workingBookings)
+                {
+                    int currentStep = booking.Status switch
+                    {
+                        "Ready" => 4,
+                        "Folding" => 3,
+                        "Drying" => 2,
+                        "Washing" => 1,
+                        _ => 0
+                    };
+                    <div class="tracking-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="fw-bold text-break">#@booking.BookingCode</div>
+                            <span class="badge rounded-pill px-3 py-2 @(booking.Status == "Ready" ? "bg-success" : "bg-primary")">
+                                @(booking.Status == "Ready" ? "Ready for Pickup" : $"Now: {booking.Status}")
+                            </span>
+                        </div>
+                        @if (booking.Status == "Ready")
+                        {
+                            <div class="alert alert-success border-0 py-2 px-3 small mt-3 mb-0" role="status">
+                                Your laundry is ready. You can now collect it at EZ-K Laundry Shop.
+                            </div>
+                        }
+                        <div class="live-track">
+                            @for (int i = 0; i < steps.Length; i++)
+                            {
+                                int stepNumber = i + 1;
+                                string state = stepNumber < currentStep || (stepNumber == 4 && currentStep == 4) ? "done"
+                                    : stepNumber == currentStep ? "now" : "";
+                                string note = state == "done" ? "Done ✓"
+                                    : state == "now" ? "In progress…"
+                                    : stepNumber == currentStep + 1 ? "Next" : "";
+                                <div class="live-step @state">
+                                    <span class="live-step-icon"><i class="bi @steps[i].Icon"></i></span>
+                                    @steps[i].Name
+                                    <span class="live-step-note">@(string.IsNullOrEmpty(note) ? " " : note)</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="order-panel" id="order-panel-pending" role="tabpanel" aria-labelledby="order-tab-pending" hidden="@(openWorking ? "hidden" : null)">
+                @if (pendingBookings.Count == 0)
+                {
+                    <div class="tracking-card text-center text-muted py-4">
+                        <i class="bi bi-check2-circle fs-2 d-block mb-2"></i>
+                        No pending bookings.
+                    </div>
+                }
+                @foreach (var booking in pendingBookings)
+                {
+                    <div class="tracking-card pending-card mb-3">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                            <div>
+                                <div class="fw-bold text-break mb-1">#@booking.BookingCode</div>
+                                @if (booking.ScheduledAt is DateTime scheduledAt)
+                                {
+                                    <div class="small text-muted">
+                                        <i class="bi bi-calendar-check me-1"></i>Drop-off: <strong class="text-dark">@scheduledAt.ToString("ddd, MMM dd, h:mm tt")</strong>
+                                        · arrive by @scheduledAt.AddMinutes(EZKLaundrySystem.Data.BookingSchedule.GraceMinutes).ToString("h:mm tt")
+                                    </div>
+                                }
+                            </div>
+                            <span class="badge rounded-pill px-3 py-2 bg-warning text-dark">Waiting for Staff</span>
+                        </div>
+                        @if (booking.CanCancel)
+                        {
+                            <form asp-action="CancelMyBooking" method="post" class="mt-3"
+                                  onsubmit="return confirm('Cancel this booking? Any verified GCash payment will be refunded by the shop.');">
+                                <input type="hidden" name="bookingCode" value="@booking.BookingCode" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel Booking
+                                </button>
+                                <small class="text-muted ms-2">Available until @booking.CancelDeadline.ToString("h:mm tt")</small>
+                            </form>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- 2. BOOKING SECTION (Multiple Choice) -->
+    <div id="sec-book" class="customer-section @SectionClass(EZKLaundrySystem.Controllers.CustomerController.BookPage)">
+        @{
+            decimal washPrice = Model.Pricing.GetValueOrDefault("Washing");
+            decimal dryPrice = Model.Pricing.GetValueOrDefault("Drying");
+            decimal foldPrice = Model.Pricing.GetValueOrDefault("Folding");
+            decimal packageFee = Model.Pricing.GetValueOrDefault(EZKLaundrySystem.Data.ProductCatalog.PackageFee);
+            decimal rushPrice = Model.Pricing.GetValueOrDefault("Rush Fee");
+            string kgPerLoadText = Model.KgPerLoad.ToString("0.##");
+        }
+        <div class="bk-wrap">
+        <h2 class="fw-bold mb-1">Book Your Laundry</h2>
+        <p class="text-muted mb-4">A few quick steps. You pay at the shop after the staff weighs your laundry.</p>
+        <form asp-action="ConfirmBooking" method="post" id="bookingForm"
+              data-wash="@washPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-dry="@dryPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+              data-fold="@foldPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-package-fee="@packageFee.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+              data-rush="@rushPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-kg-per-load="@Model.KgPerLoad.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+              data-reward-discount="@EZKLaundrySystem.Data.RewardStore.DiscountAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+            <div class="bk-step">
+                <div class="bk-step-h"><span class="bk-num">1</span><h5>Choose a service</h5><small>Prices per load (up to @kgPerLoadText kg)</small></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="bk-choice">
+                            <input class="visually-hidden service-mode" type="radio" name="serviceMode" value="Full-Service" checked="@(Model.DraftServiceMode != "Self Service")" onchange="syncSelfServiceRush()" required>
+                            <span class="t"><i class="bi bi-basket2 me-1 text-primary"></i>Full-Service (Drop-off)</span>
+                            <span class="p">&#8369;@((washPrice + dryPrice + foldPrice).ToString("0.##")) <span class="u">/ load</span></span>
+                            <span class="d">We wash, dry and fold your laundry.</span>
+                            <span class="bk-chips"><span>&#10003; Wash</span><span>&#10003; Dry</span><span>&#10003; Fold</span></span>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="bk-choice">
+                            <input class="visually-hidden service-mode" type="radio" name="serviceMode" value="Self Service" checked="@(Model.DraftServiceMode == "Self Service")" onchange="syncSelfServiceRush()" required>
+                            <span class="t"><i class="bi bi-person-gear me-1 text-primary"></i>Self-Service (DIY)</span>
+                            <span class="p">from &#8369;@(Math.Min(washPrice, dryPrice).ToString("0.##")) <span class="u">/ load</span></span>
+                            <span class="d">You use the machines yourself.</span>
+                            <span class="bk-chips muted"><span>Wash &#8369;@washPrice.ToString("0.##")</span><span>Dry &#8369;@dryPrice.ToString("0.##")</span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-3" data-self-only>
+                    <div class="bk-sub">Which machines will you use?</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="service-card bk-toggle @(Model.DraftServices.Contains("Washing") ? "active" : "")" data-service="Washing" onclick="toggleService('Washing', this)" role="button" tabindex="0">
+                                <i class="bi bi-droplet-half"></i><b>Wash</b><small>&#8369;@washPrice.ToString("0.##") / load</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="service-card bk-toggle @(Model.DraftServices.Contains("Drying") ? "active" : "")" data-service="Drying" onclick="toggleService('Drying', this)" role="button" tabindex="0">
+                                <i class="bi bi-wind"></i><b>Dry</b><small>&#8369;@dryPrice.ToString("0.##") / load</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="serviceType" id="selectedServices" value="@string.Join(", ", Model.DraftServices.Where(service => service == "Washing" || service == "Drying" || service == "Folding"))" required />
+
+                <div id="selfServiceMachineAvailability" class="p-3 border rounded-3 bg-light mt-3" hidden="@(Model.DraftServiceMode != "Self Service")">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">Self-Service Machine Availability</h6>
+                            <small class="text-muted">Current machine status before you choose your drop-off schedule.</small>
+                        </div>
+                        @if (Model.Machines.IsReady && Model.Machines.Machines.Count > 0)
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-success">Washers: @Model.Machines.AvailableOf("Washer") of @Model.Machines.CountOf("Washer") free</span>
+                                <span class="badge bg-success">Dryers: @Model.Machines.AvailableOf("Dryer") of @Model.Machines.CountOf("Dryer") free</span>
+                            </div>
+                        }
+                    </div>
+                    @if (Model.Machines.IsReady && Model.Machines.Machines.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var machine in Model.Machines.Machines)
+                            {
+                                string machineClass = machine.Status switch
+                                {
+                                    "Available" => "border-success text-success",
+                                    "In Use" => "border-warning text-warning-emphasis",
+                                    _ => "border-secondary text-secondary"
+                                };
+                                <span class="border rounded-pill px-3 py-1 small fw-semibold @machineClass">
+                                    <i class="bi @(machine.Type == "Washer" ? "bi-water" : "bi-wind") me-1"></i>@machine.Name: @machine.Status
+                                </span>
+                            }
+                        </div>
+                        @if (Model.Machines.AvailableOf("Washer") == 0 || Model.Machines.AvailableOf("Dryer") == 0)
+                        {
+                            <div class="alert alert-warning py-2 px-3 small mt-3 mb-0">
+                                A required machine is currently unavailable. You may choose another schedule or use Full-Service.
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning py-2 px-3 small mb-0">
+                            Machine availability is temporarily unavailable. Please confirm with the shop before visiting.
+                        </div>
+                    }
+                    <p class="small text-muted mt-3 mb-0">Machine status may change before your scheduled arrival.</p>
+                </div>
+
+            </div>
+
+            <div class="bk-step">
+                <div class="bk-step-h"><span class="bk-num">2</span><h5>How much laundry?</h5><small>Estimate only</small></div>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="bk-kg">
+                        <button type="button" data-kg-step="-0.5" aria-label="Decrease weight">&minus;</button>
+                        <label class="visually-hidden" for="weightInput">Estimated weight in kilograms</label>
+                        <input type="number" id="weightInput" name="weight" min="1" max="20" step="0.01" value="@draftWeight" inputmode="decimal" required>
+                        <span>kg</span>
+                        <button type="button" data-kg-step="0.5" aria-label="Increase weight">+</button>
+                    </div>
+                    <span class="bk-eq">=</span>
+                    <div class="bk-loads"><b id="loadCount">1</b><span id="loadWord">load</span></div>
+                    <label class="addon-card bk-row bk-rush ms-md-auto @(Model.DraftIncludeRushFee ? "active" : "")" for="addRushFee" data-full-only>
+                        <span><b>Rush order</b><small>Prioritized &middot; +&#8369;@rushPrice.ToString("0.##")</small></span>
+                        <span class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="includeRushFee" value="true" id="addRushFee" checked="@(Model.DraftIncludeRushFee ? "checked" : null)" onchange="toggleAddonCard(this)">
+                        </span>
+                    </label>
+                </div>
+                <p class="bk-hint mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>1 load = up to @kgPerLoadText kg. Not sure? Just estimate. The staff will weigh your laundry at the shop.</p>
+            </div>
+
+            <div class="bk-step">
+                <div class="bk-step-h"><span class="bk-num">3</span><h5>Drop-off schedule</h5><small>Arrive within @EZKLaundrySystem.Data.BookingSchedule.GraceMinutes minutes</small></div>
+                    @{
+                        string? draftSlot = Model.DraftScheduledAt?.ToString(EZKLaundrySystem.Data.BookingSchedule.SlotFormat, System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                    <input type="hidden" id="appointment" name="appointment" value="@draftSlot" />
+                    @{
+                        var slotDays = Model.AvailableSlots.GroupBy(slot => slot.Start.Date).ToList();
+                    }
+                    @if (slotDays.Count == 0)
+                    {
+                        <p class="small text-muted mt-2">No drop-off schedule is available right now. Please try again later.</p>
+                    }
+                    else
+                    {
+                        <div class="ds-step">DATE</div>
+                        <div class="ds-days" role="group" aria-label="Drop-off date">
+                            @foreach (var day in slotDays)
+                            {
+                                int openSlots = day.Count(slot => !slot.IsFull);
+                                <button type="button" class="ds-day" data-day="@day.Key.ToString("yyyy-MM-dd")" data-label="@day.Key.ToString("dddd, MMM d")" disabled="@(openSlots == 0 ? "disabled" : null)">
+                                    <span class="dw">@day.Key.ToString("ddd")</span>
+                                    <span class="dn">@day.Key.Day</span>
+                                    <span class="dm">@day.Key.ToString("MMM")</span>
+                                    <span class="dl">@(openSlots == 0 ? "Full" : $"{openSlots} open")</span>
+                                </button>
+                            }
+                        </div>
+
+                        <div class="ds-step" id="dsTimeHeading">TIME</div>
+                        @foreach (var day in slotDays)
+                        {
+                            <div class="ds-times" data-times-for="@day.Key.ToString("yyyy-MM-dd")" role="group" aria-label="Drop-off time" hidden>
+                                @foreach (var slot in day)
+                                {
+                                    <button type="button" class="ds-time" data-slot="@slot.Value" data-label="@slot.Start.ToString("dddd, MMM d 'at' h:mm tt")" disabled="@(slot.IsFull ? "disabled" : null)">
+                                        <b>@slot.Start.ToString("h:mm tt")</b>
+                                        <small>@(slot.IsFull ? "Full" : slot.Remaining == 1 ? "1 slot left" : $"{slot.Remaining} slots left")</small>
+                                    </button>
+                                }
+                            </div>
+                        }
+                        <div class="ds-chosen" id="dsChosen" hidden><i class="bi bi-calendar-check text-primary me-1"></i>Your drop-off: <b id="dsChosenText"></b></div>
+                    }
+                    <p class="small text-muted mt-2 mb-0">
+                        <i class="bi bi-clock-history me-1"></i>
+                        Please arrive within @EZKLaundrySystem.Data.BookingSchedule.GraceMinutes minutes of your schedule. Bookings are cancelled automatically after the grace period to free the slot for other customers.
+                    </p>
+                </div>
+
+            <div class="bk-step">
+                <div class="bk-step-h"><span class="bk-num">4</span><h5>Detergent &amp; extras</h5></div>
+
+                <!-- Full-Service: detergent and fabric conditioner are part of the package -->
+                <div id="packageSupplies" data-full-only>
+                    <div class="bk-seg mb-3" role="radiogroup" aria-label="Detergent and fabric conditioner">
+                        <label><input class="visually-hidden" type="radio" name="packageSupplies" value="Customer" checked onchange="syncPackageSupplies()"><span>I'll bring my own</span></label>
+                        <label><input class="visually-hidden" type="radio" name="packageSupplies" value="Shop" onchange="syncPackageSupplies()"><span>Use the shop's (+&#8369;@packageFee.ToString("0.##")/load)</span></label>
+                    </div>
+                    <div class="row g-2 mb-3" id="packageBrands" hidden>
+                        @foreach (var (type, field) in new[] { (EZKLaundrySystem.Data.ProductCatalog.Detergent, "packageDetergentId"), (EZKLaundrySystem.Data.ProductCatalog.FabricConditioner, "packageFabconId") })
+                        {
+                            <div class="col-md-6">
+                                <label class="small text-muted fw-bold" for="@field">@type (1 per load)</label>
+                                <select class="form-select" id="@field" name="@field" disabled>
+                                    <option value="">Choose a @type.ToLowerInvariant()</option>
+                                    @foreach (var product in Model.Products.Where(p => p.ProductType == type))
+                                    {
+                                        <option value="@product.ServiceId" data-extra="@product.PackageExtra.ToString(System.Globalization.CultureInfo.InvariantCulture)">@product.Name@(product.PackageExtra > 0 ? $" (+₱{product.PackageExtra:0.##}/load)" : "")</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <p class="bk-hint" data-self-only>Choose separately for detergent and fabric conditioner. Only products bought from the shop are added to your bill.</p>
+                <div class="row g-3">
+                    <div class="col-lg-6" data-self-only>
+                        <div class="addon-card @(Model.DraftDetergentSource == "Shop" ? "active" : Model.DraftDetergentSource == "Customer" ? "customer-supply" : "")">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold mb-1" for="detergentSource">Detergent</label>
+                                <div class="addon-price">Liquid sachets sold by the shop, per piece</div>
+                            </div>
+                            <select class="form-select supply-source" id="detergentSource" name="detergentSource" data-quantity-id="powderQuantity" data-help-id="detergentSourceHelp" aria-describedby="detergentSourceHelp" required onchange="updateSupplyChoice(this)">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.DraftDetergentSource) ? "selected" : null)" disabled>Choose detergent source</option>
+                                <option value="Shop" selected="@(Model.DraftDetergentSource == "Shop" ? "selected" : null)">Buy from shop</option>
+                                <option value="Customer" selected="@(Model.DraftDetergentSource == "Customer" ? "selected" : null)">I'll bring my own</option>
+                                <option value="None" selected="@(Model.DraftDetergentSource == "None" ? "selected" : null)">Not needed</option>
+                            </select>
+                            <p class="small text-muted mt-2 mb-0" id="detergentSourceHelp" aria-live="polite">Select how detergent will be provided.</p>
+                            <div class="supply-quantity mt-3" hidden="@(Model.DraftDetergentSource != "Shop" ? "hidden" : null)">
+                                <label for="detergentProductId" class="small text-muted fw-bold">Detergent brand</label>
+                                <select class="form-select mb-2" id="detergentProductId" name="detergentProductId" disabled="@(Model.DraftDetergentSource != "Shop" ? "disabled" : null)" required="@(Model.DraftDetergentSource == "Shop" ? "required" : null)">
+                                    <option value="">Choose a detergent</option>
+                                    @foreach (var product in Model.Products.Where(p => p.ProductType == EZKLaundrySystem.Data.ProductCatalog.Detergent))
+                                    {
+                                        <option value="@product.ServiceId" data-price="@product.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" selected="@(Model.DraftDetergentProductId == product.ServiceId ? "selected" : null)">@product.Name — &#8369;@product.Price.ToString("N2")</option>
+                                    }
+                                </select>
+                                <label for="powderQuantity" class="small text-muted fw-bold">Shop quantity (pieces)</label>
+                                <input type="number" class="form-control" id="powderQuantity" name="powderQuantity" min="1" max="20" step="1" value="@Model.DraftPowderQuantity" disabled="@(Model.DraftDetergentSource != "Shop" ? "disabled" : null)" required="@(Model.DraftDetergentSource == "Shop" ? "required" : null)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6" data-self-only>
+                        <div class="addon-card @(Model.DraftSoftenerSource == "Shop" ? "active" : Model.DraftSoftenerSource == "Customer" ? "customer-supply" : "")">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold mb-1" for="softenerSource">Fabric Conditioner</label>
+                                <div class="addon-price">Sachets sold by the shop, per piece</div>
+                            </div>
+                            <select class="form-select supply-source" id="softenerSource" name="softenerSource" data-quantity-id="downyQuantity" data-help-id="softenerSourceHelp" aria-describedby="softenerSourceHelp" required onchange="updateSupplyChoice(this)">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.DraftSoftenerSource) ? "selected" : null)" disabled>Choose softener source</option>
+                                <option value="Shop" selected="@(Model.DraftSoftenerSource == "Shop" ? "selected" : null)">Buy from shop</option>
+                                <option value="Customer" selected="@(Model.DraftSoftenerSource == "Customer" ? "selected" : null)">I'll bring my own</option>
+                                <option value="None" selected="@(Model.DraftSoftenerSource == "None" ? "selected" : null)">Not needed</option>
+                            </select>
+                            <p class="small text-muted mt-2 mb-0" id="softenerSourceHelp" aria-live="polite">Select how fabric softener will be provided.</p>
+                            <div class="supply-quantity mt-3" hidden="@(Model.DraftSoftenerSource != "Shop" ? "hidden" : null)">
+                                <label for="softenerProductId" class="small text-muted fw-bold">Fabric conditioner brand</label>
+                                <select class="form-select mb-2" id="softenerProductId" name="softenerProductId" disabled="@(Model.DraftSoftenerSource != "Shop" ? "disabled" : null)" required="@(Model.DraftSoftenerSource == "Shop" ? "required" : null)">
+                                    <option value="">Choose a fabric conditioner</option>
+                                    @foreach (var product in Model.Products.Where(p => p.ProductType == EZKLaundrySystem.Data.ProductCatalog.FabricConditioner))
+                                    {
+                                        <option value="@product.ServiceId" data-price="@product.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" selected="@(Model.DraftSoftenerProductId == product.ServiceId ? "selected" : null)">@product.Name — &#8369;@product.Price.ToString("N2")</option>
+                                    }
+                                </select>
+                                <label for="downyQuantity" class="small text-muted fw-bold">Shop quantity (pieces)</label>
+                                <input type="number" class="form-control" id="downyQuantity" name="downyQuantity" min="1" max="20" step="1" value="@Model.DraftDownyQuantity" disabled="@(Model.DraftSoftenerSource != "Shop" ? "disabled" : null)" required="@(Model.DraftSoftenerSource == "Shop" ? "required" : null)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bk-step">
+                <div class="bk-step-h"><span class="bk-num">5</span><h5>Payment</h5></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="bk-choice">
+                            <input class="visually-hidden" type="radio" name="paymentMethod" value="Cash" id="p2" checked="@(Model.DraftPaymentMethod == "Cash" ? "checked" : null)">
+                            <span class="t"><i class="bi bi-cash-coin me-1 text-success"></i>Cash at the shop</span>
+                            <span class="d">Pay when you claim your laundry. No advance payment.</span>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="bk-choice">
+                            <input class="visually-hidden" type="radio" name="paymentMethod" value="GCash" id="p1" checked="@(Model.DraftPaymentMethod == "GCash" ? "checked" : null)">
+                            <span class="t"><i class="bi bi-phone me-1 text-primary"></i>GCash</span>
+                            <span class="d">Scan the shop's QR code. The staff verifies your payment.</span>
+                        </label>
+                    </div>
+                </div>
+                <p class="bk-hint mt-2 mb-0">The final total may still change after the staff records the actual weight of your laundry.</p>
+            </div>
+
+            <div class="bk-step">
+                <div class="bk-step-h"><span class="bk-num bk-num-gift"><i class="bi bi-gift"></i></span><h5>Rewards <span class="fw-normal text-muted small">(optional)</span></h5></div>
+                <label class="addon-card bk-row" for="useReward">
+                    <span>
+                        <b>Use 100 points for &#8369;50 off</b>
+                        <small id="useRewardHelp">
+                            @if (!Model.Rewards.IsReady)
+                            {
+                                @:Rewards are temporarily unavailable. You can still book without a discount.
+                            }
+                            else
+                            {
+                                @:You have @Model.Rewards.Balance.ToString("N0") points.@(!Model.Rewards.CanRedeem ? " You need at least 100 points to redeem." : "")
+                            }
+                        </small>
+                    </span>
+                    <span class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" name="useReward" value="true" id="useReward" checked="@(Model.DraftUseReward ? "checked" : null)" disabled="@(!Model.Rewards.CanRedeem ? "disabled" : null)" aria-describedby="useRewardHelp">
+                    </span>
+                </label>
+                <p class="bk-hint mt-2 mb-0">Minimum order of &#8369;50. One discount per order. Points are deducted only when your booking is confirmed.</p>
+            </div>
+
+            <div class="bk-bar">
+                <div>
+                    <div class="bk-bar-l" id="estimateMeta">Estimated total</div>
+                    <div class="bk-bar-t"><span id="estimateTotal">&#8369;0.00</span><small>Final total after weighing at the shop</small></div>
+                </div>
+                <button type="submit" class="btn btn-ezk px-4 py-3">Review Order <i class="bi bi-arrow-right ms-1"></i></button>
+            </div>
+        </form>
+        </div>
+    </div>
+
+    <!-- 3. FULL BOOKING HISTORY (NAGBALIK NA) -->
+    <div id="sec-hist" class="customer-section @SectionClass(EZKLaundrySystem.Controllers.CustomerController.OrdersPage)">
+        <div class="booking-history-toolbar mb-4">
+            <h2 class="fw-bold mb-0" id="bookingHistoryHeading">Booking History</h2>
+            <div class="booking-history-search">
+                <label class="visually-hidden" for="bookingHistorySearch">Search booking history</label>
+                <input type="search" id="bookingHistorySearch" class="form-control" placeholder="Search bookings..." aria-controls="bookingHistoryTable" />
+            </div>
+        </div>
+        <div class="card-custom" id="bookingHistoryPrintArea">
+            <partial name="_BookingHistoryPrintHeader" model="Model" />
+
+            <div class="booking-history-table-wrapper">
+            <table class="table align-middle" id="bookingHistoryTable" aria-labelledby="bookingHistoryHeading">
+                <thead class="text-muted small">
+                    <tr>
+                        <th scope="col" data-history-sort="reference" aria-sort="none"><span class="booking-history-print-heading">Reference ID</span><button type="button" class="booking-history-sort">Reference ID <span aria-hidden="true">↕</span></button></th>
+                        <th scope="col" data-history-sort="date" aria-sort="descending"><span class="booking-history-print-heading">Date</span><button type="button" class="booking-history-sort">Date <span aria-hidden="true">↓</span></button></th>
+                        <th scope="col" data-history-sort="service" aria-sort="none"><span class="booking-history-print-heading">Service</span><button type="button" class="booking-history-sort">Service <span aria-hidden="true">↕</span></button></th>
+                        <th scope="col" data-history-sort="payment" aria-sort="none"><span class="booking-history-print-heading">Payment</span><button type="button" class="booking-history-sort">Payment <span aria-hidden="true">↕</span></button></th>
+                        <th scope="col" data-history-sort="status" aria-sort="none"><span class="booking-history-print-heading">Status</span><button type="button" class="booking-history-sort">Status <span aria-hidden="true">↕</span></button></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach(var h in Model.History) {
+                        <tr data-history-row data-reference="@h.RefId" data-date="@h.BookedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", System.Globalization.CultureInfo.InvariantCulture)" data-service="@h.Service" data-payment="@h.PaymentAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-status="@h.Status">
+                            <td class="text-primary fw-bold">@h.RefId</td>
+                            <td>@h.Date</td>
+                            <td>@h.Service</td>
+                            <td class="fw-bold">@h.Payment</td>
+                            @{
+                                // Same colors as Live Tracking: Pending yellow, in progress blue, Ready green, Completed light green, Cancelled red.
+                                string statusClass = h.Status switch
+                                {
+                                    "Completed" => "badge-completed",
+                                    "Cancelled" => "badge-cancelled",
+                                    "Ready" => "badge rounded-pill bg-success",
+                                    "Pending" => "badge rounded-pill bg-warning text-dark",
+                                    _ => "badge rounded-pill bg-primary"
+                                };
+                            }
+                            <td><span class="@statusClass">@(h.Status == "Ready" ? "Ready for Pickup" : h.Status)</span></td>
+                        </tr>
+                    }
+                    <tr id="bookingHistoryEmpty" hidden="@(Model.History.Count > 0)"><td colspan="5" class="text-center py-4 text-muted">No history yet. Book your first laundry!</td></tr>
+                </tbody>
+            </table>
+            </div>
+            <footer class="booking-history-print-only history-document-footer">
+                <p>System-generated report. Includes all bookings matching the current search.</p>
+                <p class="history-document-end">End of report</p>
+            </footer>
+            <div class="booking-history-footer">
+                <p id="bookingHistorySummary" class="small text-muted mb-0" role="status" aria-live="polite" aria-atomic="true"></p>
+                <nav aria-label="Booking history pages" class="booking-history-pager">
+                    <button type="button" id="bookingHistoryPrevious" class="btn btn-outline-secondary btn-sm" aria-controls="bookingHistoryTable">Previous</button>
+                    <div id="bookingHistoryPagination" class="booking-history-pages"></div>
+                    <button type="button" id="bookingHistoryNext" class="btn btn-outline-secondary btn-sm" aria-controls="bookingHistoryTable">Next</button>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. REWARDS SECTION -->
+    <div id="sec-reward" class="customer-section @SectionClass(EZKLaundrySystem.Controllers.CustomerController.RewardsPage)">
+        <h2 class="fw-bold mb-4">Rewards & Points</h2>
+        <div class="row">
+            <div class="col-lg-7">
+                <div class="card-custom mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold mb-1">Your Points Balance</h5>
+                            <p class="text-muted small">Points earned from completed, fully paid orders</p>
+                        </div>
+                    </div>
+                    <h1 class="display-3 fw-bold text-primary my-3">@(Model.Rewards.IsReady ? Model.Rewards.Balance.ToString("N0") : "Unavailable")</h1>
+                    <p class="text-muted small">Points</p>
+                    @if (!Model.Rewards.IsReady)
+                    {
+                        <small class="text-muted">Rewards are temporarily unavailable. Please try again later.</small>
+                    }
+                    else if (Model.Rewards.CanRedeem)
+                    {
+                        <small class="text-muted">You can use 100 points for &#8369;50 off your next order.</small>
+                    }
+                    else
+                    {
+                        <small class="text-muted">@((100L - Model.Rewards.Balance).ToString("N0")) more points to redeem a &#8369;50 discount.</small>
+                    }
+                </div>
+
+                <div class="card-custom">
+                    <h5 class="fw-bold mb-4">Points History</h5>
+                    @if (!Model.Rewards.IsReady)
+                    {
+                        <p class="text-muted mb-0">Points history is temporarily unavailable.</p>
+                    }
+                    else if (Model.Rewards.History.Count == 0)
+                    {
+                        <p class="text-muted mb-0">No points history yet. Complete and fully pay an order to start earning points.</p>
+                    }
+                    else
+                    {
+                        @foreach (var entry in Model.Rewards.History)
+                        {
+                            <div class="d-flex justify-content-between gap-3 border-bottom pb-3 mb-3">
+                                <div>
+                                    <p class="mb-0 fw-bold">@entry.Description</p>
+                                    <small class="text-muted">
+                                        @entry.CreatedAt.ToString("MMM dd, yyyy h:mm tt")
+                                        @if (!string.IsNullOrWhiteSpace(entry.BookingReference))
+                                        {
+                                            <span class="d-block">Order #@entry.BookingReference</span>
+                                        }
+                                    </small>
+                                </div>
+                                <span class="@(entry.Points > 0 ? "text-success" : "text-danger") fw-bold text-nowrap">@(entry.Points > 0 ? "+" : "")@entry.Points.ToString("N0") pts</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <h6 class="fw-bold mb-3"><i class="bi bi-gift text-primary"></i> Redeem Rewards</h6>
+                <form asp-action="RedeemReward" method="post">
+                    <div class="card-custom p-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <p class="mb-0 fw-bold">&#8369;50 Off Your Next Order</p><small class="text-muted fw-bold">100 pts</small>
+                        </div>
+                        <p class="small text-muted">Minimum order subtotal: &#8369;50. One discount per order, capped at the final order total. No cash change.</p>
+                        <button type="submit" class="btn btn-ezk w-100 btn-sm" disabled="@(!Model.Rewards.CanRedeem ? "disabled" : null)">Redeem Discount</button>
+                        <p class="small text-muted mt-2 mb-0">Selects the discount and opens your booking form. No points are deducted until your booking is finally confirmed.</p>
+                    </div>
+                </form>
+                <div class="card-custom text-white mt-4" style="background-color: #6366f1 !important;">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-info-circle"></i> How to Earn Points</h6>
+                    <ul class="small list-unstyled mb-0" style="line-height: 1.8;">
+                        <li>Earn 1 point for every &#8369;10 actually paid.</li>
+                        <li>Points are credited only after an order is completed and fully paid.</li>
+                        <li>Discounted amounts do not earn points.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. NOTIFICATIONS SECTION -->
+    <div id="sec-notify" class="customer-section @SectionClass(EZKLaundrySystem.Controllers.CustomerController.NotificationsPage)">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold m-0">Notifications</h2>
+                <small class="text-muted">@Model.UnreadNotificationCount unread</small>
+            </div>
+            <form asp-action="MarkAllNotificationsRead" method="post">
+                <button type="submit" class="btn btn-sm btn-light border" disabled="@(Model.UnreadNotificationCount == 0 ? "disabled" : null)">
+                    Mark all as read
+                </button>
+            </form>
+        </div>
+
+        @if (Model.Notifications.Count == 0)
+        {
+            <div class="card-custom text-center text-muted py-5">
+                <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
+                No notifications yet.
+            </div>
+        }
+        @foreach (var notification in Model.Notifications)
+        {
+            string cardClass = notification.Type switch
+            {
+                "Payment" => "payment",
+                "Promotion" => "points",
+                "Account" => "welcome",
+                _ => ""
+            };
+            string iconClass = notification.Type switch
+            {
+                "Payment" => "bi-cash-coin",
+                "Promotion" => "bi-star",
+                "Account" => "bi-person-check",
+                "Booking" => "bi-basket2",
+                _ => "bi-info-circle"
+            };
+            string iconBackground = notification.Type switch
+            {
+                "Payment" => "bg-success",
+                "Promotion" => "bg-warning",
+                "Account" => "bg-info",
+                _ => "bg-primary"
+            };
+
+            <div class="notify-card @cardClass @(notification.IsRead ? "read" : "")">
+                <div class="d-flex gap-3 align-items-start">
+                    <div class="@iconBackground text-white p-2 rounded-circle flex-shrink-0" style="width: 38px; height:38px; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi @iconClass"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between gap-3">
+                            <h6 class="mb-1 fw-bold">@notification.Title</h6>
+                            @if (!notification.IsRead)
+                            {
+                                <span class="badge bg-primary align-self-start">New</span>
+                            }
+                        </div>
+                        <p class="mb-1 text-secondary">@notification.Message</p>
+                        <small class="text-muted">@notification.TimeAgo</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- 6. ACCOUNT SETTINGS -->
+    <div id="sec-settings" class="customer-section @SectionClass(EZKLaundrySystem.Controllers.CustomerController.AccountPage)">
+        <h2 class="fw-bold mb-4">Account Settings</h2>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card-custom">
+                    <h5 class="fw-bold mb-4">Personal Information</h5>
+                    <form asp-action="UpdateProfile" method="post">
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Full Name</label>
+                            <input type="text" name="FullName" class="form-control bg-light border-0 py-2" value="@Model.FullName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Contact Number</label>
+                            <input type="text" name="ContactNumber" class="form-control bg-light border-0 py-2" value="@Model.ContactNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold">Email Address</label>
+                            <input type="email" name="Email" class="form-control bg-light border-0 py-2" value="@Model.Email" readonly>
+                        </div>
+                        <button type="submit" class="btn btn-ezk px-4">Update Profile</button>
+                    </form>
+                </div>
+
+                <div class="card-custom mt-4">
+                    <h5 class="fw-bold mb-4"><i class="bi bi-lock me-2"></i> Change Password</h5>
+                    <form asp-action="ChangePassword" method="post">
+                        <input type="hidden" name="Email" value="@Model.Email">
+                        <div class="mb-3"><input type="password" name="currentPass" class="form-control bg-light border-0 py-2" placeholder="Current Password" required></div>
+                        <div class="mb-1"><input type="password" name="newPass" class="form-control bg-light border-0 py-2" placeholder="New Strong Password" minlength="8" maxlength="128" autocomplete="new-password" required></div>
+                        <div class="form-text mb-3">Use uppercase, lowercase, number, and special character.</div>
+                        <div class="mb-4"><input type="password" name="confirmPass" class="form-control bg-light border-0 py-2" placeholder="Confirm New Password" required></div>
+                        <button type="submit" class="btn btn-ezk px-4 bg-dark border-0">Update Password</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 text-center">
+                <div class="card-custom py-5">
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
+                        <i class="bi bi-person-fill fs-1 text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">@Model.FullName</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6 border-end"><h6>@Model.History.Count</h6><small class="text-muted">Bookings</small></div>
+                        <div class="col-6"><h6>@(Model.Rewards.IsReady ? Model.Rewards.Balance.ToString("N0") : "Unavailable")</h6><small class="text-muted">Points</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- SCRIPT LOGIC -->
+@if (isHome)
+{
+    <script>
+        // Live Tracking auto-update: check every 15 seconds while the tab is visible; reload only when something changed.
+        (function () {
+            const rendered = @Json.Serialize(EZKLaundrySystem.Controllers.CustomerController.TrackingSignature(Model.ActiveBookings, Model.UnreadNotificationCount));
+            const url = '@Url.Action("TrackingStatus", "Customer")';
+            async function check() {
+                if (document.hidden) return;
+                try {
+                    const response = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    if (data.signature !== rendered) {
+                        try { sessionStorage.setItem('ezkOrderTab', document.querySelector('.order-tab.active')?.id ?? ''); } catch { }
+                        location.reload();
+                    }
+                } catch { /* offline or server restarting: try again on the next tick */ }
+            }
+            setInterval(check, @(EZKLaundrySystem.Controllers.CustomerController.TrackingPollSeconds * 1000));
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+        })();
+    </script>
+}
+<script>
+    function showOrderTab(name) {
+        document.querySelectorAll('.order-tab').forEach(tab => {
+            const selected = tab.id === 'order-tab-' + name;
+            tab.classList.toggle('active', selected);
+            tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+        document.querySelectorAll('.order-panel').forEach(panel => panel.hidden = panel.id !== 'order-panel-' + name);
+    }
+
+    // After an auto-update reload, reopen the tab the customer was looking at.
+    try {
+        const savedTab = sessionStorage.getItem('ezkOrderTab');
+        sessionStorage.removeItem('ezkOrderTab');
+        if (savedTab && document.getElementById(savedTab)) showOrderTab(savedTab.replace('order-tab-', ''));
+    } catch { }
+
+    let selectedServicesArray = Array.from(document.querySelectorAll('.service-card.active'))
+        .map(card => card.dataset.service);
+    const isFullService = () => document.querySelector('input[name="serviceMode"]:checked')?.value !== 'Self Service';
+    function showSelectedServices() {
+        document.querySelectorAll('.service-card[data-service]').forEach(card =>
+            card.classList.toggle('active', selectedServicesArray.includes(card.dataset.service)));
+        document.getElementById('selectedServices').value = selectedServicesArray.join(', ');
+    }
+
+    // Full-Service is EZ-K's wash-dry-fold package; Self-Service is wash and/or dry only.
+    function syncServiceMode() {
+        const full = isFullService();
+        selectedServicesArray = full
+            ? ['Washing', 'Drying', 'Folding']
+            : selectedServicesArray.filter(service => service !== 'Folding');
+        showSelectedServices();
+        document.querySelectorAll('[data-full-only]').forEach(element => element.hidden = !full);
+        document.querySelectorAll('[data-self-only]').forEach(element => {
+            element.hidden = full;
+            element.querySelectorAll('.supply-source').forEach(select => { select.disabled = full; if (!full) updateSupplyChoice(select); });
+            if (full) element.querySelectorAll('.supply-quantity input, .supply-quantity select').forEach(field => { field.disabled = true; field.required = false; });
+        });
+        syncPackageSupplies();
+        updateEstimate();
+    }
+
+    // Estimated total shown in the bottom bar; the same rules the server uses when it saves the booking.
+    function updateEstimate() {
+        const form = document.getElementById('bookingForm');
+        if (!form) return;
+        const price = name => Number(form.dataset[name] || 0);
+        const kg = Number(document.getElementById('weightInput').value);
+        const loads = kg > 0 ? Math.ceil(kg / price('kgPerLoad')) : 0;
+        document.getElementById('loadCount').textContent = loads;
+        document.getElementById('loadWord').textContent = loads === 1 ? 'load' : 'loads';
+
+        const full = isFullService();
+        let total = 0;
+        if (full) {
+            total += (price('wash') + price('dry') + price('fold')) * loads;
+            if (document.querySelector('input[name="packageSupplies"]:checked')?.value === 'Shop') {
+                total += price('packageFee') * loads;
+                ['packageDetergentId', 'packageFabconId'].forEach(id =>
+                    total += Number(document.getElementById(id).selectedOptions[0]?.dataset.extra || 0) * loads);
+            }
+            if (document.getElementById('addRushFee')?.checked) total += price('rush');
+        } else {
+            if (selectedServicesArray.includes('Washing')) total += price('wash') * loads;
+            if (selectedServicesArray.includes('Drying')) total += price('dry') * loads;
+            [['detergentSource', 'detergentProductId', 'powderQuantity'], ['softenerSource', 'softenerProductId', 'downyQuantity']]
+                .forEach(([source, product, quantity]) => {
+                    if (document.getElementById(source).value !== 'Shop') return;
+                    const unitPrice = Number(document.getElementById(product).selectedOptions[0]?.dataset.price || 0);
+                    total += unitPrice * Number(document.getElementById(quantity).value || 0);
+                });
+        }
+        if (document.getElementById('useReward')?.checked && total >= price('rewardDiscount')) total -= price('rewardDiscount');
+
+        document.getElementById('estimateTotal').textContent = '₱' + total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const schedule = document.querySelector('.ds-time.on')?.dataset.label;
+        document.getElementById('estimateMeta').textContent = ['Estimated total', full ? 'Full-Service' : 'Self-Service',
+            loads + (loads === 1 ? ' load' : ' loads'), schedule].filter(Boolean).join(' · ');
+    }
+
+    document.querySelectorAll('[data-kg-step]').forEach(button => button.addEventListener('click', () => {
+        const input = document.getElementById('weightInput');
+        const next = Math.min(Number(input.max), Math.max(Number(input.min), (Number(input.value) || 0) + Number(button.dataset.kgStep)));
+        input.value = String(Math.round(next * 100) / 100);
+        updateEstimate();
+    }));
+    document.querySelectorAll('.bk-toggle').forEach(card => card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
+    }));
+    document.getElementById('bookingForm')?.addEventListener('input', updateEstimate);
+    document.getElementById('bookingForm')?.addEventListener('change', updateEstimate);
+
+    function syncPackageSupplies() {
+        const useShop = isFullService() && document.querySelector('input[name="packageSupplies"]:checked')?.value === 'Shop';
+        document.getElementById('packageBrands').hidden = !useShop;
+        document.querySelectorAll('#packageBrands select').forEach(select => { select.disabled = !useShop; select.required = useShop; });
+        document.querySelectorAll('input[name="packageSupplies"]').forEach(radio => radio.disabled = !isFullService());
+    }
+
+    function toggleService(name, element) {
+        if (isFullService()) return;
+        if (selectedServicesArray.includes(name)) {
+            selectedServicesArray = selectedServicesArray.filter(item => item !== name);
+            element.classList.remove('active');
+        } else {
+            selectedServicesArray.push(name);
+            document.querySelectorAll('.service-card[data-service]').forEach(card =>
+                card.classList.toggle('active', selectedServicesArray.includes(card.dataset.service)));
+        }
+        document.getElementById('selectedServices').value = selectedServicesArray.join(', ');
+        syncSelfServiceRush();
+        updateEstimate();
+    }
+
+    function syncSelfServiceRush() {
+        const rush = document.getElementById('addRushFee');
+        const selfService = document.querySelector('input[name="serviceMode"]:checked')?.value === 'Self Service';
+        const machineAvailability = document.getElementById('selfServiceMachineAvailability');
+        if (machineAvailability) machineAvailability.hidden = !selfService;
+        if (!rush) return;
+        if (selfService && rush.checked) {
+            rush.checked = false;
+            toggleAddonCard(rush);
+        }
+        rush.disabled = selfService;
+        rush.title = selfService ? 'Rush Fee is not available for Self Service.' : '';
+    }
+    document.querySelectorAll('.service-mode').forEach(radio => radio.addEventListener('change', syncServiceMode));
+
+    function toggleAddonCard(checkbox) {
+        checkbox.closest('.addon-card').classList.toggle('active', checkbox.checked);
+    }
+
+    function updateSupplyChoice(select) {
+        const buyFromShop = select.value === 'Shop';
+        const bringOwn = select.value === 'Customer';
+        const card = select.closest('.addon-card');
+        const quantity = document.getElementById(select.dataset.quantityId);
+        quantity.closest('.supply-quantity').querySelectorAll('input, select').forEach(field => {
+            field.disabled = !buyFromShop;
+            field.required = buyFromShop;
+        });
+        quantity.closest('.supply-quantity').hidden = !buyFromShop;
+        card.classList.toggle('active', buyFromShop);
+        card.classList.toggle('customer-supply', bringOwn);
+        document.getElementById(select.dataset.helpId).textContent = buyFromShop
+            ? 'Choose the brand. The selected shop quantity will be added to your bill.'
+            : bringOwn
+                ? 'Please bring your own product. No shop-product charge.'
+                : select.value === 'None'
+                    ? 'No product requested. No shop-product charge.'
+                    : 'Please choose a source before reviewing your order.';
+    }
+
+    document.querySelectorAll('.supply-source').forEach(updateSupplyChoice);
+    syncSelfServiceRush();
+    syncServiceMode();
+
+    // Drop-off schedule: pick a date card, then one of that date's time slots.
+    const appointmentInput = document.getElementById('appointment');
+    function showScheduleDay(dayButton) {
+        document.querySelectorAll('.ds-day').forEach(button => button.classList.toggle('on', button === dayButton));
+        document.querySelectorAll('.ds-times').forEach(group => group.hidden = group.dataset.timesFor !== dayButton.dataset.day);
+        document.getElementById('dsTimeHeading').textContent = 'TIME · ' + dayButton.dataset.label.toUpperCase();
+    }
+    function chooseScheduleTime(timeButton) {
+        document.querySelectorAll('.ds-time').forEach(button => button.classList.toggle('on', button === timeButton));
+        appointmentInput.value = timeButton.dataset.slot;
+        document.getElementById('dsChosenText').textContent = timeButton.dataset.label;
+        document.getElementById('dsChosen').hidden = false;
+        updateEstimate();
+    }
+    document.querySelectorAll('.ds-day').forEach(button => button.addEventListener('click', () => showScheduleDay(button)));
+    document.querySelectorAll('.ds-time').forEach(button => button.addEventListener('click', () => chooseScheduleTime(button)));
+    (function restoreSchedule() {
+        const saved = [...document.querySelectorAll('.ds-time')].find(button => button.dataset.slot === appointmentInput.value && !button.disabled);
+        if (saved) {
+            showScheduleDay(document.querySelector(`.ds-day[data-day="${saved.closest('.ds-times').dataset.timesFor}"]`));
+            chooseScheduleTime(saved);
+            return;
+        }
+        appointmentInput.value = '';
+        const firstOpenDay = document.querySelector('.ds-day:not(:disabled)');
+        if (firstOpenDay) showScheduleDay(firstOpenDay);
+    })();
+
+    document.getElementById('bookingForm').addEventListener('submit', function(e) {
+        if (selectedServicesArray.length === 0) {
+            e.preventDefault();
+            alert("Please select at least one service before booking.");
+        } else if (!appointmentInput.value) {
+            e.preventDefault();
+            alert("Please choose a drop-off date and time before booking.");
+            document.getElementById('dsTimeHeading')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+</script>
+<script src="~/js/customer-history.js" asp-append-version="true"></script>

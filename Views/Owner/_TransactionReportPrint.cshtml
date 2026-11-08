@@ -1,0 +1,85 @@
+@model EZKLaundrySystem.Controllers.OwnerDashboardVM
+
+@{
+    var preparedBy = Context.Session.GetString("UserName");
+}
+
+@* A separate document, rendered from the same filtered records as the screen table. *@
+<article id="transactionReportDocument" aria-labelledby="transactionDocumentTitle">
+    <header class="transaction-document-header">
+        <div class="transaction-document-brand">
+            <img src="~/images/ezk-laundry-logo.png" alt="EZ-K Laundry Services logo" />
+            <p>EZ-K Laundry Services</p>
+        </div>
+        <div class="transaction-document-title">
+            <p class="transaction-document-eyebrow">Business records</p>
+            <h1 id="transactionDocumentTitle">Transaction Report</h1>
+            <p>Payment transaction details</p>
+        </div>
+    </header>
+
+    <dl class="transaction-document-metadata">
+        <div>
+            <dt>Report coverage</dt>
+            <dd class="transaction-document-scope">@Model.ReportFilter.ScopeLabel</dd>
+        </div>
+        <div class="transaction-document-generated">
+            <dt>Date generated</dt>
+            <dd id="transactionReportPrintDate"></dd>
+        </div>
+        <div class="transaction-document-prepared">
+            <dt>Prepared by</dt>
+            <dd id="transactionReportPreparedBy">@(string.IsNullOrWhiteSpace(preparedBy) ? "Not available" : preparedBy.Trim())</dd>
+        </div>
+    </dl>
+
+    <div class="transaction-document-section-heading">
+        <h2>Transaction details</h2>
+        <p>Currency: Philippine peso (PHP)</p>
+    </div>
+    <table class="transaction-document-table" aria-label="Transaction details">
+        <colgroup>
+            <col style="width:15%" />
+            <col style="width:14%" />
+            <col style="width:20%" />
+            <col style="width:18%" />
+            <col style="width:23%" />
+            <col style="width:10%" />
+        </colgroup>
+        <thead>
+            <tr>
+                <th scope="col">Date / Time</th>
+                <th scope="col">Transaction ID</th>
+                <th scope="col">Booking</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Services</th>
+                <th scope="col">Method</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.TransactionReport.Count == 0)
+            {
+                <tr><td colspan="6" class="transaction-document-empty">No transactions match the selected filters.</td></tr>
+            }
+            @foreach (var transaction in Model.TransactionReport)
+            {
+                <tr>
+                    <td>@transaction.TransactionDate.ToString("MMM dd, yyyy h:mm tt")</td>
+                    <td class="transaction-document-reference">@transaction.TransactionId</td>
+                    <td>@transaction.BookingReference</td>
+                    <td>@transaction.CustomerName</td>
+                    <td>@transaction.Services</td>
+                    <td>@transaction.PaymentMethod</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div class="transaction-document-total">
+        <p><span>Total Amount</span><strong id="transactionReportTotalAmount">&#8369;@Model.TransactionReport.Sum(transaction => transaction.Amount).ToString("N2")</strong></p>
+        <p class="transaction-document-total-note">Sum of the listed transaction amounts.</p>
+    </div>
+    <footer class="transaction-document-footer">
+        <p>System-generated report. Coverage follows the applied transaction filters.</p>
+        <p class="transaction-document-end">End of report</p>
+    </footer>
+</article>

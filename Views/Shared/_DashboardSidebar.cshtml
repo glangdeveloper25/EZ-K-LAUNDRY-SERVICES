@@ -1,0 +1,47 @@
+@model EZKLaundrySystem.Models.DashboardSidebarVM
+@{
+    var dashboard = Model.IsOwner ? "Owner" : "Staff";
+    var linkClass = Model.IsOwner ? "nav-link-owner" : "nav-link-staff";
+    var overview = Model.IsOwner ? "overview" : "overview-section";
+    var onDashboard = !Model.IsInventory && !Model.IsPos;
+}
+
+<aside class="dashboard-sidebar @(Model.IsOwner ? "owner-sidebar" : "staff-sidebar")" aria-label="@dashboard navigation">
+    <div class="sidebar-brand-container mb-4">
+        <img src="~/images/ezk-laundry-logo.png" asp-append-version="true" alt="EZ-K Laundry Services" class="sidebar-logo" />
+    </div>
+    <nav class="@(Model.IsOwner ? "nav-column-group" : "nav flex-column")" aria-label="@dashboard menu">
+        <a asp-controller="@dashboard" asp-action="Index" asp-fragment="@overview"
+           data-dashboard-section="@overview" class="@linkClass @(onDashboard ? "active" : "")"
+           id="@(Model.IsOwner ? "btn-overview" : "staff-overview")" aria-current="@(onDashboard ? "page" : null)">
+            <i class="bi bi-grid-fill" aria-hidden="true"></i> Overview
+        </a>
+        @if (Model.IsOwner)
+        {
+            <a asp-controller="Owner" asp-action="Index" asp-fragment="staff" data-dashboard-section="staff" class="nav-link-owner" id="btn-staff"><i class="bi bi-people-fill" aria-hidden="true"></i> Staff Management</a>
+            <a asp-controller="Owner" asp-action="Index" asp-fragment="ops" data-dashboard-section="ops" class="nav-link-owner"><i class="bi bi-basket3-fill" aria-hidden="true"></i> Laundry Operations</a>
+            <a asp-controller="Owner" asp-action="Index" asp-fragment="records" data-dashboard-section="records" class="nav-link-owner"><i class="bi bi-person-vcard-fill" aria-hidden="true"></i> Customer Records</a>
+            <a asp-controller="Owner" asp-action="Index" asp-fragment="reports" data-dashboard-section="reports" class="nav-link-owner" id="btn-reports"><i class="bi bi-file-earmark-bar-graph-fill" aria-hidden="true"></i> Transaction Report</a>
+            <a asp-controller="Owner" asp-action="Index" asp-fragment="pricing" data-dashboard-section="pricing" class="nav-link-owner"><i class="bi bi-tags-fill" aria-hidden="true"></i> Service Pricing</a>
+        }
+        else
+        {
+            <a asp-controller="Staff" asp-action="Index" asp-fragment="queue-section" data-dashboard-section="queue-section" class="nav-link-staff"><i class="bi bi-list-task" aria-hidden="true"></i> Active Queue</a>
+            @* The older "Process Walk-in" form is hidden: walk-ins are processed through the POS.
+               To show it again, restore this link:
+               <a asp-controller="Staff" asp-action="Index" asp-fragment="walkin-section" data-dashboard-section="walkin-section" class="nav-link-staff" id="walkInNavigation"><i class="bi bi-plus-circle" aria-hidden="true"></i> Process Walk-in</a> *@
+            <a asp-controller="Pos" asp-action="Index" class="nav-link-staff @(Model.IsPos ? "active" : "")" aria-current="@(Model.IsPos ? "page" : null)"><i class="bi bi-cart3" aria-hidden="true"></i> Walk-in (POS)</a>
+            <a asp-controller="Staff" asp-action="Index" asp-fragment="machines-section" data-dashboard-section="machines-section" class="nav-link-staff"><i class="bi bi-hdd-stack" aria-hidden="true"></i> Self-Service Machines</a>
+        }
+        <a asp-controller="Inventory" asp-action="Index" class="@linkClass @(Model.IsInventory ? "active" : "")" aria-current="@(Model.IsInventory ? "page" : null)">
+            <i class="bi bi-box-seam" aria-hidden="true"></i> @(Model.IsOwner ? "Inventory" : "Supplies Inventory")
+        </a>
+        @if (!Model.IsOwner)
+        {
+            <a asp-controller="Staff" asp-action="Index" asp-fragment="pickup-section" data-dashboard-section="pickup-section" class="nav-link-staff"><i class="bi bi-truck" aria-hidden="true"></i> View Pickup Method</a>
+            <a asp-controller="Staff" asp-action="Index" asp-fragment="shift-section" data-dashboard-section="shift-section" class="nav-link-staff"><i class="bi bi-person-badge" aria-hidden="true"></i> My Shift</a>
+        }
+    </nav>
+    <hr class="my-4" />
+    <a asp-controller="Account" asp-action="Logout" class="@linkClass text-danger"><i class="bi bi-box-arrow-left" aria-hidden="true"></i> Logout</a>
+</aside>

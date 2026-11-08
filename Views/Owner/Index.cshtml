@@ -1,0 +1,1244 @@
+@model EZKLaundrySystem.Controllers.OwnerDashboardVM
+@{
+    Layout = "_Layout";
+}
+
+<style>
+    /* SYSTEM-WIDE ALIGNMENT RESET */
+    body { background-color: #f8fafc; margin: 0; padding: 0; overflow-x: hidden; }
+    .customer-instructions { white-space: pre-line; overflow-wrap: anywhere; }
+
+    /* PERFECTLY ALIGNED FIXED SIDEBAR */
+    .owner-sidebar { 
+        width: 280px; 
+        position: fixed; 
+        height: 100vh; 
+        background: white; 
+        border-right: 1px solid #e2e8f0; 
+        padding: 24px 24px; 
+        z-index: 1050; /* Siguradong nakapatong sa lahat */
+        top: 0;
+        left: 0;
+    }
+
+    .sidebar-logo { display: block; width: 100%; max-width: 125px; height: auto; object-fit: contain; object-position: left center; }
+
+    /* CLEAR GAP: Bigyan ng sapat na puwang para hindi matabunan ng sidebar */
+    .main-content-owner { 
+        margin-left: 300px; /* May safety buffer para hindi mag-overlap */
+        padding: 24px 40px 40px; 
+        min-height: 100vh;
+        background-color: #f8fafc;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* STRAIGHT ALIGN FOR SIDEBAR LINKS */
+    .nav-link-owner { 
+        display: flex; 
+        align-items: center; 
+        padding: 12px 15px; 
+        color: #64748b; 
+        text-decoration: none; 
+        border-radius: 10px; 
+        margin-bottom: 8px; 
+        font-weight: 500; 
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+        border: 1px solid transparent;
+    }
+
+    .nav-link-owner i { 
+        font-size: 1.25rem; 
+        margin-right: 16px; 
+        width: 24px; 
+        text-align: center;
+        display: inline-block;
+    }
+
+    .nav-link-owner:hover, .nav-link-owner.active { 
+        background-color: #eff6ff; 
+        color: #6366f1; 
+        font-weight: 600;
+        border: 1px solid #e0e7ff;
+    }
+
+    .nav-link-owner.text-danger:hover {
+        background-color: #fef2f2;
+        color: #ef4444;
+        border-color: #fee2e2;
+    }
+
+    /* TOP PROFILE BAR: its own row, so it never overlaps a section's buttons (e.g. Add New Staff) */
+    .owner-top-nav {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin: 0 0 16px;
+        gap: 20px;
+    }
+
+    .overview-header {
+        margin-top: 0;
+    }
+
+    .overview-header h2 {
+        font-size: 1.9rem;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+    }
+
+    .overview-header p {
+        margin: 5px 0 0;
+        font-size: 0.9rem !important;
+    }
+
+    /* COMPACT OWNER SUMMARY CARDS */
+    .card-stat { 
+        border: 1px solid #e2e8f0;
+        border-radius: 14px; 
+        padding: 20px; 
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05); 
+        background: #ffffff; 
+        margin-bottom: 24px; 
+    }
+
+    .overview-stats .card-stat {
+        min-height: 142px;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .overview-stats .card-stat::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 4px;
+        background: var(--owner-card-accent, #2563eb);
+    }
+
+    .owner-stat-icon {
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        color: var(--owner-card-accent, #2563eb);
+        background: var(--owner-card-soft, #eff6ff);
+        font-size: 1.25rem;
+    }
+
+    .owner-stat-card--orders { --owner-card-accent: #7c3aed; --owner-card-soft: #f5f3ff; }
+    .owner-stat-card--staff { --owner-card-accent: #059669; --owner-card-soft: #ecfdf5; }
+    .owner-stat-copy { min-width: 0; }
+
+    .card-stat h6 {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 12px;
+    }
+
+    .card-stat h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 2px;
+    }
+
+    .overview-stats small { font-size: 0.78rem; }
+
+    @@media (max-width: 767.98px) {
+        .main-content-owner { margin-left: 0; padding: 20px 18px 32px; }
+        .overview-header h2 { font-size: 1.65rem; }
+    }
+
+    .btn-ezk { 
+        background-color: #6366f1; 
+        color: #ffffff !important; 
+        border: none; 
+        border-radius: 10px; 
+        padding: 12px 24px; 
+        font-weight: 600; 
+        transition: all 0.2s; 
+    }
+    .btn-ezk:hover {
+        background-color: #4f46e5;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    #staffModal .staff-password-field { position: relative; }
+    #staffModal .staff-password-field .form-control { padding-right: 3.25rem; }
+    #staffModal .staff-password-field input::-ms-reveal { display: none; }
+    #staffModal .staff-password-toggle {
+        position: absolute;
+        top: 0;
+        right: 4px;
+        bottom: 0;
+        width: 40px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: #64748b;
+        cursor: pointer;
+    }
+    #staffModal .staff-password-toggle:hover { color: #2563eb; }
+    #staffModal .staff-password-toggle:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: -3px;
+    }
+    
+    .section-content { display: none; }
+    .section-content.active { display: block; }
+
+    .table-pagination {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 18px;
+        padding-top: 18px;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .table-pagination button {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #475569;
+        transition: background-color 0.2s;
+    }
+
+    .table-pagination button:hover:not(:disabled) { background: #e2e8f0; }
+    .table-pagination button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .report-period-field { display: none; }
+    .transaction-report-table { font-size: 0.9rem; }
+    .transaction-report-table td { vertical-align: middle; }
+
+    .print-only { display: none; }
+
+    @@media print {
+        @@page {
+            size: A4 portrait;
+            margin: 14mm;
+        }
+
+        body {
+            background: #ffffff !important;
+            color: #111827 !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .owner-sidebar,
+        .owner-top-nav,
+        .overview-header,
+        .overview-stats,
+        .print-report-button,
+        .monthly-income-heading,
+        #reports > h2,
+        .transaction-filter-panel,
+        #transactionReportPrintArea,
+        .section-content:not(#reports) {
+            display: none !important;
+        }
+
+        .main-content-owner {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: auto !important;
+            background: #ffffff !important;
+        }
+
+        #reports {
+            display: block !important;
+        }
+
+        .monthly-income-report {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .monthly-income-report .print-only {
+            display: block !important;
+        }
+
+        .monthly-income-report .table-responsive {
+            overflow: visible !important;
+        }
+
+        .monthly-income-report table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+
+        .monthly-income-report th,
+        .monthly-income-report td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 10px !important;
+        }
+
+        .monthly-income-report thead {
+            display: table-header-group;
+        }
+
+        .monthly-income-report tr {
+            break-inside: avoid;
+        }
+
+        body.print-laundry-operations #overview,
+        body.print-laundry-operations #staff,
+        body.print-laundry-operations #records,
+        body.print-laundry-operations #reports,
+        body.print-laundry-operations #pricing,
+        body.print-customer-records #overview,
+        body.print-customer-records #staff,
+        body.print-customer-records #ops,
+        body.print-customer-records #reports,
+        body.print-customer-records #pricing {
+            display: none !important;
+        }
+
+        body.print-laundry-operations #ops,
+        body.print-customer-records #records {
+            display: block !important;
+        }
+
+        body.print-customer-bookings .print-target-modal .print-only {
+            display: block !important;
+        }
+
+        body.print-customer-bookings .print-target-modal table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+
+        body.print-customer-bookings .print-target-modal th,
+        body.print-customer-bookings .print-target-modal td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 9px !important;
+        }
+
+        body.print-customer-bookings .print-target-modal thead {
+            display: table-header-group;
+        }
+
+        body.print-customer-bookings .print-target-modal tr {
+            break-inside: avoid;
+        }
+
+        body.print-customer-bookings .main-content-owner,
+        body.print-customer-bookings .modal:not(.print-target-modal),
+        body.print-customer-bookings .modal-backdrop {
+            display: none !important;
+        }
+
+        body.print-customer-bookings .print-target-modal {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+
+        body.print-customer-bookings .print-target-modal .modal-dialog {
+            max-width: none !important;
+            margin: 0 !important;
+            transform: none !important;
+        }
+
+        body.print-customer-bookings .print-target-modal .modal-content {
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        body.print-customer-bookings .print-target-modal .modal-header,
+        body.print-customer-bookings .print-target-modal .modal-footer {
+            display: none !important;
+        }
+
+    }
+</style>
+<link rel="stylesheet" href="~/css/transaction-report-print.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/customer-records-print.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/laundry-operations-print.css" asp-append-version="true" />
+
+<!-- SIDEBAR AREA -->
+<link rel="stylesheet" href="~/css/dashboard-sidebar.css" asp-append-version="true" />
+<partial name="_DashboardSidebar" model="new DashboardSidebarVM { IsOwner = true }" />
+
+<!-- MAIN CONTENT AREA -->
+<div class="main-content-owner">
+    
+    <!-- TOP NAVIGATION BAR -->
+    <div class="owner-top-nav">
+        <div class="d-flex align-items-center gap-2">
+            <div class="text-end">
+                <p class="mb-0 fw-bold small text-dark">@Context.Session.GetString("UserName")</p>
+                <p class="mb-0 text-muted" style="font-size: 10px;">Owner</p>
+            </div>
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 35px; background-color: #6366f1 !important;">
+                O
+            </div>
+        </div>
+    </div>
+    
+    <!-- SECTION 1: OVERVIEW -->
+    <div id="overview" class="section-content active">
+        <div class="d-flex justify-content-between align-items-center mb-4 overview-header">
+            <div>
+                <h2 class="fw-bold m-0 text-dark">Owner Dashboard</h2>
+                <p class="text-muted small">Welcome back! Here is your business summary for today.</p>
+            </div>
+        </div>
+
+        @if (Model.NeedsRestock.Count > 0)
+        {
+            <div class="alert alert-danger d-flex flex-wrap gap-2 align-items-center justify-content-between mb-4" role="alert" style="background:#dc2626; color:#fff; border:0">
+                <div>
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <b>@Model.NeedsRestock.Count product(s) need restocking</b> (@EZKLaundrySystem.Models.InventorySnapshot.LowStockLevel pieces or fewer)<br />
+                    <small>@string.Join(" · ", Model.NeedsRestock.Select(p => $"{p.Name} ({p.Stock ?? 0})"))</small>
+                </div>
+                <a asp-controller="Inventory" asp-action="Index" class="btn btn-light btn-sm fw-bold">Stock In</a>
+            </div>
+        }
+
+        <div class="row g-3 mb-5 overview-stats">
+            <div class="col-md-4">
+                <div class="card-stat owner-stat-card--earnings">
+                    <span class="owner-stat-icon"><i class="bi bi-wallet2"></i></span>
+                    <div class="owner-stat-copy">
+                        <h6>TOTAL EARNINGS</h6>
+                        <h2 class="text-primary">₱@Model.TotalEarnings.ToString("N2")</h2>
+                        <small class="text-muted fw-semibold">Recorded paid payments</small>
+                    </div>
+                </div>
+            </div>
+            @{
+                // Active = not yet Completed or Cancelled.
+                var activeOrders = Model.BookingList.Where(b => b.Status != "Completed" && b.Status != "Cancelled").ToList();
+                int activeRushOrders = activeOrders.Count(b => b.Priority == "Rush");
+                int activeStaff = Model.StaffList.Count(s => s.Status == "Active");
+            }
+            <div class="col-md-4">
+                <div class="card-stat owner-stat-card--orders">
+                    <span class="owner-stat-icon"><i class="bi bi-basket2"></i></span>
+                    <div class="owner-stat-copy">
+                        <h6>ACTIVE ORDERS</h6>
+                        <h2>@activeOrders.Count</h2>
+                        <small class="text-primary fw-semibold">@activeRushOrders Rush order(s)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-stat owner-stat-card--staff">
+                    <span class="owner-stat-icon"><i class="bi bi-people"></i></span>
+                    <div class="owner-stat-copy">
+                        <h6>ACTIVE STAFF</h6>
+                        <h2>@activeStaff / @Model.StaffList.Count</h2>
+                        <small class="text-muted fw-semibold">Active out of all staff accounts</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SECTION 2: STAFF MANAGEMENT -->
+    <div id="staff" class="section-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold mb-0 text-dark">Staff Management</h2>
+            <button class="btn btn-ezk shadow-sm" data-bs-toggle="modal" data-bs-target="#staffModal">
+                <i class="bi bi-plus-lg me-2"></i>Add New Staff
+            </button>
+        </div>
+        <div class="card-stat">
+            <table class="table align-middle table-hover m-0">
+                <thead class="table-light"><tr><th>Name</th><th>Email</th><th>Contact</th><th>Status</th><th>Shift</th><th>Actions</th></tr></thead>
+                <tbody>
+                    @foreach (var s in Model.StaffList) {
+                        bool onDuty = Model.OnDutyStaffIds.Contains(s.Id);
+                        <tr>
+                            <td class="fw-bold">@s.FullName</td>
+                            <td>@s.Email</td>
+                            <td>@s.ContactNumber</td>
+                            <td><span class="badge bg-success">@s.Status</span></td>
+                            <td><span class="badge @(onDuty ? "bg-primary" : "bg-light text-muted border")">@(onDuty ? "On Duty" : "Off Duty")</span></td>
+                            <td>
+                                <!-- Status Toggle Form -->
+                                <form asp-action="ToggleStaffStatus" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@s.Id">
+                                    <input type="hidden" name="status" value="@(s.Status == "Active" ? "Inactive" : "Active")">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Toggle Status">
+                                        <i class="bi @(s.Status == "Active" ? "bi-slash-circle" : "bi-check-circle")"></i>
+                                    </button>
+                                </form>
+                                <!-- Delete Form -->
+                                <form asp-action="DeleteStaff" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this staff?');">
+                                    <input type="hidden" name="id" value="@s.Id">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION 3: LAUNDRY OPERATIONS -->
+    <div id="ops" class="section-content">
+        <h2 class="fw-bold mb-4 text-dark">Laundry Operations</h2>
+        <div class="card-stat" id="laundryOperationsPrintArea">
+            <table class="table align-middle table-hover m-0" id="laundryOperationsTable">
+                <thead class="table-light"><tr><th>Order ID</th><th>Customer</th><th>Service</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody id="laundryOperationsBody">
+                    @foreach (var b in Model.BookingList) {
+                        <tr class="laundry-operation-row">
+                            <td class="fw-bold">#BK-@b.Id</td>
+                            <td>@b.CustomerName</td>
+                            <td>
+                                @b.ServiceType
+                                @if (!string.IsNullOrWhiteSpace(b.CustomerNotes))
+                                {
+                                    <div class="small text-muted mt-2">
+                                        <span class="fw-semibold">Customer instructions</span>
+                                        <div class="customer-instructions">@b.CustomerNotes</div>
+                                    </div>
+                                }
+                            </td>
+                            <td class="text-primary fw-bold">&#8369;@b.Amount.ToString("N2")</td>
+                            <td><span class="badge bg-warning text-dark">@b.Status</span></td>
+                        </tr>
+                    }
+                    @if (Model.BookingList.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">No laundry operations found.</td></tr>
+                    }
+                </tbody>
+            </table>
+            <div class="table-pagination" id="laundryOperationsPagination">
+                <span id="laundryOperationsRange">0-0 of 0</span>
+                <button type="button" id="laundryOperationsPrevious" onclick="changeLaundryOperationsPage(-1)" aria-label="Previous page" title="Previous">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button type="button" id="laundryOperationsNext" onclick="changeLaundryOperationsPage(1)" aria-label="Next page" title="Next">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            <div class="d-flex justify-content-end mt-3 owner-report-print-button">
+                <button type="button" class="btn btn-ezk" onclick="printLaundryOperations()">
+                    <i class="bi bi-printer me-2"></i>Print Operations Report
+                </button>
+            </div>
+        </div>
+        <partial name="/Views/Owner/_LaundryOperationsPrint.cshtml" model="Model" />
+    </div>
+
+    <!-- SECTION 4: CUSTOMER RECORDS -->
+    <div id="records" class="section-content">
+        <h2 class="fw-bold mb-4 text-dark">Customer Records & Booking Details</h2>
+        <div class="card-stat" id="customerRecordsPrintArea">
+            <table class="table align-middle table-hover m-0">
+                <thead class="table-light"><tr><th>Name</th><th>Category</th><th>Email</th><th>Contact</th><th class="customer-action-column">Action</th></tr></thead>
+                <tbody>
+                    @foreach (var c in Model.CustomerList) {
+                        int completed = c.Transactions.Count(t => t.Status == "Completed");
+                        string category = EZKLaundrySystem.Data.CustomerCategory.Classify(completed);
+                        <tr>
+                            <td class="fw-bold">@c.FullName</td>
+                            <td>
+                                <span class="badge @(category == EZKLaundrySystem.Data.CustomerCategory.Regular ? "bg-warning text-dark" : "bg-secondary")">@category</span>
+                                <small class="text-muted d-block">@completed completed</small>
+                            </td>
+                            <td>@c.Email</td>
+                            <td>@c.ContactNumber</td>
+                            <td class="customer-action-column">
+                                <!-- View Details Trigger Button -->
+                                <button class="btn btn-sm btn-outline-primary px-3" data-bs-toggle="modal" data-bs-target="#custModal-@c.Id">
+                                    <i class="bi bi-search me-1"></i> View Bookings
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="d-flex justify-content-end mt-4 owner-report-print-button">
+                <button type="button" class="btn btn-ezk" onclick="printCustomerRecords()">
+                    <i class="bi bi-printer me-2"></i>Print Customer Records
+                </button>
+            </div>
+        </div>
+        <partial name="/Views/Owner/_CustomerRecordsPrint.cshtml" model="Model" />
+    </div>
+
+    <!-- SECTION 5: TRANSACTION REPORT -->
+    <div id="reports" class="section-content">
+        <h2 class="fw-bold mb-4 text-dark">Transaction Report</h2>
+
+        <div class="card-stat monthly-income-report" id="monthlyIncomeReport">
+            <div class="print-only text-center mb-4">
+                <h3 class="fw-bold mb-1">EZ-K Laundry Services</h3>
+                <p class="mb-0">Monthly Income Report</p>
+                <small>Printed on <span id="incomeReportPrintDate"></span></small>
+            </div>
+
+            <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-4 monthly-income-heading">
+                <div>
+                    <h5 class="fw-bold mb-1">Monthly Income Report</h5>
+                    <p class="text-muted small mb-0">All recorded paid payments, grouped by month and payment method.</p>
+                    <small class="text-muted">Use the filters below for transaction details.</small>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-outline-primary print-report-button" onclick="printMonthlyIncomeReport()">
+                        <i class="bi bi-printer me-2"></i>Print Monthly Summary
+                    </button>
+                    <i class="bi bi-bar-chart-line-fill fs-3 text-primary print-report-button"></i>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-end">Cash</th>
+                            <th class="text-end">GCash</th>
+                            <th class="text-end">Total Income</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.MonthlyIncome.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    No paid transactions recorded yet.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var income in Model.MonthlyIncome)
+                        {
+                            <tr>
+                                <td class="fw-bold">@income.Month</td>
+                                <td class="text-end">₱@income.Cash.ToString("N2")</td>
+                                <td class="text-end">₱@income.GCash.ToString("N2")</td>
+                                <td class="text-end fw-bold text-primary">₱@income.Total.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-stat transaction-filter-panel">
+            <form asp-action="Index" method="get" id="transactionReportFilterForm">
+                <input type="hidden" name="openReports" value="true" />
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small fw-bold text-muted">Report Period</label>
+                        <select name="period" id="reportPeriod" class="form-select" onchange="updateReportPeriodFields()">
+                            <option value="All" selected="@(Model.ReportFilter.Period == "All" ? "selected" : null)">All Transactions</option>
+                            <option value="Today" selected="@(Model.ReportFilter.Period == "Today" ? "selected" : null)">Today</option>
+                            <option value="Yesterday" selected="@(Model.ReportFilter.Period == "Yesterday" ? "selected" : null)">Yesterday</option>
+                            <option value="SpecificDate" selected="@(Model.ReportFilter.Period == "SpecificDate" ? "selected" : null)">Specific Date</option>
+                            <option value="Monthly" selected="@(Model.ReportFilter.Period == "Monthly" ? "selected" : null)">Monthly</option>
+                            <option value="Yearly" selected="@(Model.ReportFilter.Period == "Yearly" ? "selected" : null)">Yearly</option>
+                            <option value="Custom" selected="@(Model.ReportFilter.Period == "Custom" ? "selected" : null)">Custom Date Range</option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6 report-period-field" data-periods="SpecificDate">
+                        <label class="form-label small fw-bold text-muted">Date</label>
+                        <input type="date" name="reportDate" class="form-control" value="@Model.ReportFilter.ReportDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-lg-2 col-md-6 report-period-field" data-periods="Monthly">
+                        <label class="form-label small fw-bold text-muted">Month</label>
+                        <select name="reportMonth" class="form-select">
+                            @for (int month = 1; month <= 12; month++)
+                            {
+                                <option value="@month" selected="@(Model.ReportFilter.Month == month ? "selected" : null)">@(new DateTime(2000, month, 1).ToString("MMMM"))</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-lg-2 col-md-6 report-period-field" data-periods="Monthly,Yearly">
+                        <label class="form-label small fw-bold text-muted">Year</label>
+                        <select name="reportYear" class="form-select">
+                            @for (int year = DateTime.Today.Year + 1; year >= 2020; year--)
+                            {
+                                <option value="@year" selected="@(Model.ReportFilter.Year == year ? "selected" : null)">@year</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6 report-period-field" data-periods="Custom">
+                        <label class="form-label small fw-bold text-muted">Start Date</label>
+                        <input type="date" name="startDate" class="form-control" value="@Model.ReportFilter.StartDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-lg-3 col-md-6 report-period-field" data-periods="Custom">
+                        <label class="form-label small fw-bold text-muted">End Date</label>
+                        <input type="date" name="endDate" class="form-control" value="@Model.ReportFilter.EndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-bold text-muted">Payment Method</label>
+                        <select name="paymentMethod" class="form-select">
+                            <option value="All" selected="@(Model.ReportFilter.PaymentMethod == "All" ? "selected" : null)">All Methods</option>
+                            <option value="Cash" selected="@(Model.ReportFilter.PaymentMethod == "Cash" ? "selected" : null)">Cash</option>
+                            <option value="GCash" selected="@(Model.ReportFilter.PaymentMethod == "GCash" ? "selected" : null)">GCash</option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-bold text-muted">Payment Status</label>
+                        <select name="paymentStatus" class="form-select">
+                            <option value="All" selected="@(Model.ReportFilter.PaymentStatus == "All" ? "selected" : null)">All Statuses</option>
+                            <option value="Paid" selected="@(Model.ReportFilter.PaymentStatus == "Paid" ? "selected" : null)">Paid</option>
+                            <option value="Pending" selected="@(Model.ReportFilter.PaymentStatus == "Pending" ? "selected" : null)">Pending</option>
+                            <option value="Partial" selected="@(Model.ReportFilter.PaymentStatus == "Partial" ? "selected" : null)">Partial</option>
+                            <option value="Failed" selected="@(Model.ReportFilter.PaymentStatus == "Failed" ? "selected" : null)">Failed</option>
+                            <option value="Refunded" selected="@(Model.ReportFilter.PaymentStatus == "Refunded" ? "selected" : null)">Refunded</option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-4 col-md-12 d-flex gap-2">
+                        <button type="submit" class="btn btn-ezk flex-fill">
+                            <i class="bi bi-funnel me-2"></i>Apply Filter
+                        </button>
+                        <a asp-action="Index" asp-route-openReports="true" class="btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="transactionReportPrintArea">
+            <div class="row g-3 mb-4 transaction-report-summary">
+                <div class="col-lg-3 col-md-6"><div class="card-stat h-100 mb-0 p-3"><h6>Transactions</h6><h4 class="fw-bold mb-0">@Model.TransactionReport.Count</h4></div></div>
+                <div class="col-lg-3 col-md-6"><div class="card-stat h-100 mb-0 p-3"><h6>Paid Cash</h6><h4 class="fw-bold mb-0">&#8369;@Model.ReportCashTotal.ToString("N2")</h4></div></div>
+                <div class="col-lg-3 col-md-6"><div class="card-stat h-100 mb-0 p-3"><h6>Paid GCash</h6><h4 class="fw-bold mb-0">&#8369;@Model.ReportGCashTotal.ToString("N2")</h4></div></div>
+                <div class="col-lg-3 col-md-6"><div class="card-stat h-100 mb-0 p-3 border border-primary"><h6>Paid Total</h6><h4 class="fw-bold text-primary mb-0">&#8369;@Model.ReportGrandTotal.ToString("N2")</h4></div></div>
+            </div>
+
+            <div class="card-stat transaction-report-card">
+                <div class="d-flex justify-content-between align-items-center mb-3 transaction-report-heading">
+                    <div>
+                        <h5 class="fw-bold mb-1">@Model.ReportFilter.ScopeLabel</h5>
+                        <small class="text-muted">Without filters, all transactions are shown and printed.</small>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary transaction-report-print-button" onclick="printTransactionReport()">
+                        <i class="bi bi-printer me-2"></i>Print Transactions
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 transaction-report-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date / Time</th>
+                                <th>Transaction ID</th>
+                                <th>Booking</th>
+                                <th>Customer</th>
+                                <th>Services</th>
+                                <th>Method</th>
+                                <th class="text-end">Amount</th>
+                                <th>Status</th>
+                                <th>Recorded By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.TransactionReport.Count == 0)
+                            {
+                                <tr><td colspan="9" class="text-center text-muted py-5">No transactions match the selected filters.</td></tr>
+                            }
+                            @foreach (var transaction in Model.TransactionReport)
+                            {
+                                string statusClass = transaction.Status switch
+                                {
+                                    "Paid" => "bg-success",
+                                    "Pending" or "Partial" => "bg-warning text-dark",
+                                    "Failed" => "bg-danger",
+                                    "Refunded" => "bg-secondary",
+                                    _ => "bg-info text-dark"
+                                };
+                                <tr>
+                                    <td class="text-nowrap">@transaction.TransactionDate.ToString("MMM dd, yyyy h:mm tt")</td>
+                                    <td class="fw-bold text-nowrap">@transaction.TransactionId</td>
+                                    <td class="text-nowrap">@transaction.BookingReference</td>
+                                    <td>@transaction.CustomerName</td>
+                                    <td>@transaction.Services</td>
+                                    <td>@transaction.PaymentMethod</td>
+                                    <td class="text-end fw-bold">&#8369;@transaction.Amount.ToString("N2")</td>
+                                    <td><span class="badge @statusClass">@transaction.Status</span></td>
+                                    <td>@transaction.RecordedBy</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <partial name="/Views/Owner/_TransactionReportPrint.cshtml" model="Model" />
+    </div>
+
+    <!-- SECTION 6: SERVICE PRICING -->
+    <div id="pricing" class="section-content">
+        <h2 class="fw-bold mb-4 text-dark">Service Pricing Settings</h2>
+        <div class="card-stat">
+            <form asp-action="UpdatePricing" method="post">
+                <!-- CORE SERVICES -->
+                <h6 class="fw-bold text-primary mb-3 mt-2 border-bottom pb-2"><i class="bi bi-basket me-2"></i> Core Services</h6>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <label class="fw-bold small text-muted mb-2">Washing (per load)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₱</span>
+                            <input type="number" name="Washing" class="form-control py-2" value="@(Model.Pricing.ContainsKey("Washing") ? Model.Pricing["Washing"] : 25.00m)" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold small text-muted mb-2">Drying (per load)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₱</span>
+                            <input type="number" name="Drying" class="form-control py-2" value="@(Model.Pricing.ContainsKey("Drying") ? Model.Pricing["Drying"] : 25.00m)" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold small text-muted mb-2">Folding (per load)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₱</span>
+                            <input type="number" name="Folding" class="form-control py-2" value="@(Model.Pricing.ContainsKey("Folding") ? Model.Pricing["Folding"] : 10.00m)" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold small text-muted mb-2">Kilos per load</label>
+                        <div class="input-group">
+                            <input type="number" name="KgPerLoad" class="form-control py-2" value="@Model.KgPerLoad.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" min="1" max="50" step="0.01" required>
+                            <span class="input-group-text bg-light">kg</span>
+                        </div>
+                        <small class="text-muted">The actual weight is divided by this to get the number of loads.</small>
+                    </div>
+                </div>
+
+                <!-- ADD-ONS / PRODUCTS -->
+                <h6 class="fw-bold text-primary mb-3 mt-4 border-bottom pb-2"><i class="bi bi-cart3 me-2"></i> Detergent &amp; Fabric Conditioner (per piece)</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light"><tr><th>Product</th><th>Type</th><th style="width:150px">Sachet price</th><th style="width:150px">Full-Service extra / load</th><th>Stock</th><th class="text-end">Shown to staff &amp; customers</th></tr></thead>
+                        <tbody>
+                            @foreach (var product in Model.Products)
+                            {
+                                int stock = product.Stock ?? 0;
+                                <tr class="@(product.IsActive ? "" : "text-muted")">
+                                    <td class="fw-semibold">@product.Name</td>
+                                    <td>@product.ProductType</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light">₱</span>
+                                            <input type="number" name="ProductPrices[@product.ServiceId]" class="form-control" value="@product.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" min="0" step="0.01" required>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light">+₱</span>
+                                            <input type="number" name="ProductExtras[@product.ServiceId]" class="form-control" value="@product.PackageExtra.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" min="0" step="0.01" required title="Added per load when this product is used in the Full-Service package (e.g. Ariel +₱3)">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (!product.IsActive) { <span>—</span> }
+                                        else if (stock <= 0) { <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i>0 · Out of stock</span> }
+                                        else if (stock <= EZKLaundrySystem.Models.InventorySnapshot.LowStockLevel) { <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>@stock · Low</span> }
+                                        else { <span>@stock pcs</span> }
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="submit" form="toggleProduct@(product.ServiceId)" class="btn btn-sm @(product.IsActive ? "btn-outline-secondary" : "btn-outline-success")">@(product.IsActive ? "Hide" : "Show")</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="small text-muted mt-2">Record stock received under <a asp-controller="Inventory" asp-action="Index">Inventory → Stock In</a>.</div>
+                </div>
+
+                <!-- SPECIAL FEES & LOGISTICS -->
+                <h6 class="fw-bold text-primary mb-3 mt-4 border-bottom pb-2"><i class="bi bi-lightning-charge me-2"></i> Special Fees</h6>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="fw-bold small text-muted mb-2">Rush Fee (Fixed Add-on)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₱</span>
+                            <input type="number" name="RushFee" class="form-control py-2" value="@(Model.Pricing.ContainsKey("RushFee") ? Model.Pricing["RushFee"] : 75.00m)" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="fw-bold small text-muted mb-2">Full-Service: shop's detergent &amp; fabcon (per load)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">+₱</span>
+                            <input type="number" name="PackageFee" class="form-control py-2" value="@(Model.Pricing.GetValueOrDefault("Detergent&FabconPackage", 10.00m))" min="0" step="0.01" required>
+                        </div>
+                        <small class="text-muted">Wash + Dry + Fold is the package with the customer's own supplies; this is added per load when the shop's are used.</small>
+                    </div>
+                </div>
+                
+                <div class="mt-5 border-top pt-4 text-end">
+                    <button type="submit" class="btn btn-ezk px-5 py-2 shadow-sm"><i class="bi bi-save me-2"></i> Save Pricing Changes</button>
+                </div>
+            </form>
+            @foreach (var product in Model.Products)
+            {
+                <form id="toggleProduct@(product.ServiceId)" asp-action="ToggleProduct" method="post" class="d-none">
+                    <input type="hidden" name="serviceId" value="@product.ServiceId" />
+                </form>
+            }
+        </div>
+
+        <div class="card-stat mt-4">
+            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-plus-circle me-2"></i> Add a Product</h6>
+            <form asp-action="AddProduct" method="post" class="row g-3 align-items-end">
+                <div class="col-md-5"><label class="fw-bold small text-muted mb-2" for="newProductName">Brand, variant and size</label><input id="newProductName" name="name" class="form-control" maxlength="100" placeholder="e.g. Breeze Liquid 60 ml" required></div>
+                <div class="col-md-3">
+                    <label class="fw-bold small text-muted mb-2" for="newProductType">Type</label>
+                    <select id="newProductType" name="productType" class="form-select" required>
+                        @foreach (var type in EZKLaundrySystem.Data.ProductCatalog.Types) { <option value="@type">@type</option> }
+                    </select>
+                </div>
+                <div class="col-md-2"><label class="fw-bold small text-muted mb-2" for="newProductPrice">Price</label><div class="input-group"><span class="input-group-text bg-light">₱</span><input id="newProductPrice" name="price" type="number" class="form-control" min="0" step="0.01" required></div></div>
+                <div class="col-md-2"><button type="submit" class="btn btn-ezk w-100"><i class="bi bi-plus-lg me-1"></i>Add</button></div>
+                <div class="col-12 small text-muted">New products start with 0 stock. Record the stock received under Inventory → Stock In.</div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- ADD STAFF MODAL -->
+<div class="modal fade" id="staffModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-4">
+            <h4 class="fw-bold mb-3">Add Staff Account</h4>
+            <form asp-action="AddStaff" method="post">
+                <div class="mb-3"><label class="small fw-bold">Full Name</label><input type="text" name="FullName" class="form-control" required></div>
+                <div class="mb-3"><label class="small fw-bold">Email</label><input type="email" name="Email" class="form-control" required></div>
+                <div class="mb-1">
+                    <label for="staffPassword" class="small fw-bold">Password</label>
+                    <div class="staff-password-field">
+                        <input type="password" id="staffPassword" name="Password" class="form-control" minlength="8" maxlength="128" autocomplete="new-password" aria-describedby="staffPasswordHelp" required>
+                        <button type="button" class="staff-password-toggle" data-password-label="password" aria-controls="staffPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-text mb-3" id="staffPasswordHelp">Use uppercase, lowercase, number, and special character.</div>
+                <div class="mb-3">
+                    <label for="staffConfirmPassword" class="small fw-bold">Confirm Password</label>
+                    <div class="staff-password-field">
+                        <input type="password" id="staffConfirmPassword" name="ConfirmPassword" class="form-control" autocomplete="new-password" required>
+                        <button type="button" class="staff-password-toggle" data-password-label="confirm password" aria-controls="staffConfirmPassword" aria-label="Show confirm password" aria-pressed="false" title="Show confirm password">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="staffContactNumber" class="small fw-bold">Contact Number</label>
+                    <input type="tel" id="staffContactNumber" name="ContactNumber" class="form-control" inputmode="numeric" autocomplete="tel" minlength="11" maxlength="11" pattern="[0-9]{11}" title="Enter exactly 11 digits (0-9), without letters, spaces, or special characters." aria-describedby="staffContactNumberHelp" required>
+                    <div class="form-text" id="staffContactNumberHelp">11 digits only (0-9). No letters, spaces, or special characters.</div>
+                </div>
+                <button type="submit" class="btn btn-ezk w-100 py-3">Save Staff Account</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- ========================================================================= -->
+<!-- NESTED POPUP MODALS FOR CUSTOMER DETAILS (PLACED AT THE BOTTOM FOR FIX) -->
+<!-- ========================================================================= -->
+@foreach (var c in Model.CustomerList) {
+    <div class="modal fade" id="custModal-@c.Id" tabindex="-1" style="z-index: 1100;">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-primary"><i class="bi bi-folder-fill me-2"></i> Bookings of @c.FullName</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="print-only text-center mb-4">
+                        <h3 class="fw-bold mb-1">EZ-K Laundry Services</h3>
+                        <p class="mb-1">Customer Booking History</p>
+                        <p class="mb-0">Customer: <strong>@c.FullName</strong></p>
+                        <small>Printed on <span id="customerBookingsPrintDate-@c.Id"></span></small>
+                    </div>
+                    <table class="table align-middle table-hover m-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ref ID</th>
+                                <th>Service Type</th>
+                                <th>Weight</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(var t in c.Transactions){
+                                <tr>
+                                    <td class="fw-bold">#BK-@t.Id</td>
+                                    <td>
+                                        @t.ServiceType
+                                        @if (!string.IsNullOrWhiteSpace(t.CustomerNotes))
+                                        {
+                                            <div class="small text-muted mt-2">
+                                                <span class="fw-semibold">Customer instructions</span>
+                                                <div class="customer-instructions">@t.CustomerNotes</div>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>@t.Weight kg</td>
+                                    <td class="fw-bold text-primary">&#8369;@t.Amount.ToString("N2")</td>
+                                    <td><span class="badge bg-info">@t.Status</span></td>
+                                </tr>
+                            }
+                            @if(c.Transactions.Count == 0){ 
+                                <tr><td colspan="5" class="text-center py-3 text-muted">No transactions found for this customer.</td></tr> 
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-ezk" onclick="printCustomerBookings(@c.Id)">
+                        <i class="bi bi-printer me-2"></i>Print Booking History
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    // Each staff password field can be revealed independently; closing the modal hides both again.
+    (function () {
+        const modal = document.getElementById('staffModal');
+        const buttons = modal.querySelectorAll('.staff-password-toggle');
+        const contactNumber = document.getElementById('staffContactNumber');
+
+        contactNumber.addEventListener('paste', function (event) {
+            if (!event.clipboardData) return;
+            event.preventDefault();
+            const start = contactNumber.selectionStart ?? contactNumber.value.length;
+            const end = contactNumber.selectionEnd ?? start;
+            const remaining = Math.max(0, 11 - (contactNumber.value.length - (end - start)));
+            const digits = event.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, remaining);
+            contactNumber.setRangeText(digits, start, end, 'end');
+            contactNumber.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        contactNumber.addEventListener('input', function () {
+            const original = contactNumber.value;
+            const sanitized = original.replace(/[^0-9]/g, '').slice(0, 11);
+            if (original === sanitized) return;
+            const cursor = contactNumber.selectionStart;
+            contactNumber.value = sanitized;
+            if (cursor !== null) {
+                const position = Math.min(original.slice(0, cursor).replace(/[^0-9]/g, '').length, sanitized.length);
+                contactNumber.setSelectionRange(position, position);
+            }
+        });
+
+        function setVisibility(button, visible) {
+            const field = document.getElementById(button.getAttribute('aria-controls'));
+            field.type = visible ? 'text' : 'password';
+            button.querySelector('i').classList.toggle('bi-eye', !visible);
+            button.querySelector('i').classList.toggle('bi-eye-slash', visible);
+            const label = (visible ? 'Hide ' : 'Show ') + button.dataset.passwordLabel;
+            button.setAttribute('aria-label', label);
+            button.setAttribute('aria-pressed', String(visible));
+            button.title = label;
+        }
+
+        buttons.forEach(button => button.addEventListener('click', function () {
+            const field = document.getElementById(button.getAttribute('aria-controls'));
+            setVisibility(button, field.type === 'password');
+        }));
+
+        function hidePasswords() {
+            buttons.forEach(button => setVisibility(button, false));
+        }
+
+        modal.addEventListener('hidden.bs.modal', hidePasswords);
+        modal.querySelector('form').addEventListener('reset', hidePasswords);
+        modal.querySelector('form').addEventListener('submit', hidePasswords);
+    })();
+
+    // SIDEBAR NAVIGATION SCRIPT
+    function showSection(sectionId, el) {
+        document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
+        document.getElementById(sectionId).classList.add('active');
+        document.querySelectorAll('.nav-link-owner').forEach(l => l.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    function updateReportPeriodFields() {
+        const selectedPeriod = document.getElementById('reportPeriod').value;
+        document.querySelectorAll('.report-period-field').forEach(field => {
+            const periods = field.dataset.periods.split(',');
+            field.style.display = periods.includes(selectedPeriod) ? 'block' : 'none';
+        });
+    }
+
+    function printTransactionReport() {
+        if (document.body.classList.contains('print-transaction-report')) return;
+        setOwnerReportPrintDate('transactionReportPrintDate');
+        const pageStyle = document.createElement('style');
+        pageStyle.textContent = '@@page { size: A4 portrait; margin: 10mm; }';
+        // Apply the transaction document's margins without changing other reports.
+        document.body.appendChild(pageStyle);
+        document.body.classList.add('print-transaction-report');
+        // Keep the dedicated report document visible until printing is finished or cancelled.
+        // Some browsers return from print() before the dialog closes.
+        const cleanup = () => {
+            document.body.classList.remove('print-transaction-report');
+            pageStyle.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+        try {
+            window.print();
+        } catch (error) {
+            cleanup();
+            throw error;
+        }
+    }
+
+    function printMonthlyIncomeReport() {
+        const printDate = document.getElementById('incomeReportPrintDate');
+        printDate.textContent = new Intl.DateTimeFormat('en-PH', {
+            dateStyle: 'long',
+            timeStyle: 'short'
+        }).format(new Date());
+        window.print();
+    }
+
+    function setOwnerReportPrintDate(elementId) {
+        document.getElementById(elementId).textContent = new Intl.DateTimeFormat('en-PH', {
+            dateStyle: 'long',
+            timeStyle: 'short'
+        }).format(new Date());
+    }
+
+    function printLaundryOperations() {
+        if (document.body.classList.contains('print-laundry-operations')) return;
+        setOwnerReportPrintDate('laundryOperationsPrintDate');
+        const pageStyle = document.createElement('style');
+        pageStyle.textContent = '@@page { size: A4 portrait; margin: 10mm; }';
+        document.body.appendChild(pageStyle);
+        document.body.classList.add('print-laundry-operations');
+        // Preserve both the report and the current dashboard page until printing ends.
+        const cleanup = () => {
+            document.body.classList.remove('print-laundry-operations');
+            pageStyle.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+        try {
+            window.print();
+        } catch (error) {
+            cleanup();
+            throw error;
+        }
+    }
+
+    function printCustomerRecords() {
+        if (document.body.classList.contains('print-customer-records')) return;
+        setOwnerReportPrintDate('customerRecordsPrintDate');
+        const pageStyle = document.createElement('style');
+        pageStyle.textContent = '@@page { size: A4 portrait; margin: 10mm; }';
+        document.body.appendChild(pageStyle);
+        document.body.classList.add('print-customer-records');
+        // Keep the report available until the print dialog closes or is cancelled.
+        const cleanup = () => {
+            document.body.classList.remove('print-customer-records');
+            pageStyle.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+        try {
+            window.print();
+        } catch (error) {
+            cleanup();
+            throw error;
+        }
+    }
+
+    function printCustomerBookings(customerId) {
+        const customerModal = document.getElementById(`custModal-${customerId}`);
+        setOwnerReportPrintDate(`customerBookingsPrintDate-${customerId}`);
+        customerModal.classList.add('print-target-modal');
+        document.body.classList.add('print-customer-bookings');
+        try {
+            window.print();
+        } finally {
+            document.body.classList.remove('print-customer-bookings');
+            customerModal.classList.remove('print-target-modal');
+        }
+    }
+
+    const laundryOperationsRows = Array.from(document.querySelectorAll('.laundry-operation-row'));
+    const laundryOperationsPageSize = 22;
+    let laundryOperationsCurrentPage = 1;
+
+    function renderLaundryOperationsPage() {
+        const totalRows = laundryOperationsRows.length;
+        const totalPages = Math.max(1, Math.ceil(totalRows / laundryOperationsPageSize));
+        laundryOperationsCurrentPage = Math.min(Math.max(laundryOperationsCurrentPage, 1), totalPages);
+
+        const startIndex = (laundryOperationsCurrentPage - 1) * laundryOperationsPageSize;
+        const endIndex = Math.min(startIndex + laundryOperationsPageSize, totalRows);
+
+        laundryOperationsRows.forEach((row, index) => {
+            row.style.display = index >= startIndex && index < endIndex ? '' : 'none';
+        });
+
+        document.getElementById('laundryOperationsRange').textContent = totalRows === 0
+            ? '0-0 of 0'
+            : `${startIndex + 1}-${endIndex} of ${totalRows}`;
+        document.getElementById('laundryOperationsPrevious').disabled = laundryOperationsCurrentPage === 1 || totalRows === 0;
+        document.getElementById('laundryOperationsNext').disabled = laundryOperationsCurrentPage === totalPages || totalRows === 0;
+    }
+
+    function changeLaundryOperationsPage(direction) {
+        laundryOperationsCurrentPage += direction;
+        renderLaundryOperationsPage();
+    }
+
+    updateReportPeriodFields();
+    renderLaundryOperationsPage();
+
+    @if (Model.OpenReports)
+    {
+        <text>showSection('reports', document.getElementById('btn-reports'));</text>
+    }
+</script>
+<script src="~/js/dashboard-navigation.js" asp-append-version="true" data-preserve-current-section="@(Model.OpenReports ? "true" : "false")"></script>

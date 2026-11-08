@@ -1,0 +1,83 @@
+@model EZKLaundrySystem.Models.InventoryPageVM
+
+@{
+    bool hasDateRange = Model.ReportFromDate.HasValue && Model.ReportToDate.HasValue;
+    string coverage = hasDateRange
+        ? $"{Model.ReportFromDate!.Value:MMMM d, yyyy} to {Model.ReportToDate!.Value:MMMM d, yyyy}"
+        : "Latest 100 stock movements";
+}
+
+@* Date-range reports include all matching movements; printing never changes stock. *@
+<article id="inventoryReportDocument" aria-labelledby="inventoryDocumentTitle" data-from-date="@Model.ReportFromDate?.ToString("yyyy-MM-dd")" data-to-date="@Model.ReportToDate?.ToString("yyyy-MM-dd")">
+    <header class="inventory-document-header">
+        <div class="inventory-document-brand">
+            <img src="~/images/ezk-laundry-logo.png" alt="EZ-K Laundry Services logo" />
+            <p>EZ-K Laundry Services</p>
+        </div>
+        <div class="inventory-document-title">
+            <p class="inventory-document-eyebrow">Business records</p>
+            <h1 id="inventoryDocumentTitle">Inventory Report</h1>
+            <p>Stock movement history</p>
+        </div>
+    </header>
+
+    <dl class="inventory-document-metadata">
+        <div>
+            <dt>Report coverage</dt>
+            <dd id="inventoryReportCoverage">@coverage</dd>
+        </div>
+        <div class="inventory-document-generated">
+            <dt>Date generated</dt>
+            <dd id="inventoryReportPrintDate">@DateTime.Now.ToString("MMMM d, yyyy h:mm tt")</dd>
+        </div>
+    </dl>
+
+    <div class="inventory-document-section-heading">
+        <h2>Stock movement details</h2>
+        <p>Records shown: <span id="inventoryReportRecordCount">@Model.Snapshot.Movements.Count</span></p>
+    </div>
+    <p class="inventory-document-note">Quantities are in pieces. Positive (+) adds stock; negative (-) reduces stock. Balance After is the stock balance immediately after each movement.</p>
+
+    <table class="inventory-document-table" aria-label="Stock movement details">
+        <colgroup>
+            <col style="width:18%" />
+            <col style="width:17%" />
+            <col style="width:13%" />
+            <col style="width:14%" />
+            <col style="width:14%" />
+            <col style="width:24%" />
+        </colgroup>
+        <thead>
+            <tr>
+                <th scope="col">Date / Time</th>
+                <th scope="col">Supply</th>
+                <th scope="col" class="inventory-document-quantity">Pieces</th>
+                <th scope="col" class="inventory-document-quantity">Balance After</th>
+                <th scope="col">Movement</th>
+                <th scope="col">Booking</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Snapshot.Movements.Count == 0)
+            {
+                <tr><td colspan="6" class="inventory-document-empty">@(hasDateRange ? "No stock movements found for the selected dates." : "No stock movements recorded yet.")</td></tr>
+            }
+            @foreach (var movement in Model.Snapshot.Movements)
+            {
+                <tr>
+                    <td>@movement.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td>
+                    <td>@(movement.Name == "Powder" ? "Powder Soap" : movement.Name == "Downy" ? "Downy Softener" : movement.Name)</td>
+                    <td class="inventory-document-quantity inventory-document-change">@(movement.Change > 0 ? "+" : "")@movement.Change.ToString("N0")</td>
+                    <td class="inventory-document-quantity">@movement.BalanceAfter.ToString("N0")</td>
+                    <td>@movement.Kind</td>
+                    <td>@(string.IsNullOrWhiteSpace(movement.BookingReference) ? "-" : movement.BookingReference)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <footer class="inventory-document-footer">
+        <p>@(hasDateRange ? "System-generated report of all stock movements in the selected date range. Both dates are included." : "System-generated report of the latest 100 stock movements loaded on this page, not the complete inventory history.")</p>
+        <p class="inventory-document-end">End of report</p>
+    </footer>
+</article>

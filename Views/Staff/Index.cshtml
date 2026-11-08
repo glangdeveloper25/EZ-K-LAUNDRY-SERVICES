@@ -1,0 +1,1328 @@
+@model EZKLaundrySystem.Controllers.StaffDashboardVM
+@{
+    Layout = "_Layout";
+    // Shop products are sold through Walk-in (POS); this older form only records customer-owned supplies.
+    EZKLaundrySystem.Models.InventoryItem? powderStock = null;
+    EZKLaundrySystem.Models.InventoryItem? downyStock = null;
+    var selectedWalkInServices = Model.WalkIn.CoreServices;
+    decimal WalkInPrice(string key, decimal fallback = 0m) => Model.Pricing.TryGetValue(key, out var price) ? price : fallback;
+}
+
+<style>
+    body { background-color: #f8fafc; }
+    .staff-sidebar { width: 260px; position: fixed; height: 100vh; background: white; border-right: 1px solid #e2e8f0; padding: 30px 20px; z-index: 1000; }
+    .sidebar-logo { display: block; width: 100%; max-width: 150px; height: auto; object-fit: contain; object-position: left center; }
+    .main-content { margin-left: 260px; padding: 30px; }
+    /* Sticky so the date and time stay visible while scrolling. */
+    .staff-header { position: sticky; top: 12px; z-index: 900; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; padding: 12px 18px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; box-shadow: 0 4px 12px rgba(15,23,42,.04); }
+    .staff-clock { padding-left: 16px; border-left: 1px solid #e2e8f0; color: #10203b; font-size: .9rem; font-weight: 700; line-height: 1.35; text-align: right; }
+    #staffTime { font-variant-numeric: tabular-nums; }
+    .nav-link-staff { display: flex; align-items: center; padding: 12px 15px; color: #64748b; text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: .94rem; font-weight: 500; cursor: pointer; transition: 0.3s; }
+    .nav-link-staff:hover, .nav-link-staff.active { background-color: #eff6ff; color: #6366f1; }
+    .stat-card { background: white; border-radius: 14px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 3px 10px rgba(15,23,42,.045); }
+    .overview-stat { min-height: 112px; display: flex; align-items: center; gap: 16px; border-left: 4px solid var(--stat-color); }
+    .overview-stat-icon { width: 54px; height: 54px; flex: 0 0 54px; display: grid; place-items: center; border-radius: 12px; color: var(--stat-color); background: var(--stat-soft); font-size: 1.45rem; }
+    .overview-stat-label { color: #475569; font-size: .74rem; font-weight: 800; letter-spacing: .025em; }
+    .overview-stat-value { color: #10203b; font-size: 1.85rem; line-height: 1.05; font-weight: 800; margin-top: 4px; }
+    .overview-stat.orders { --stat-color: #2563eb; --stat-soft: #eff6ff; }
+    .overview-stat.pending { --stat-color: #e11d48; --stat-soft: #fff1f2; }
+    .overview-stat.cash { --stat-color: #d97706; --stat-soft: #fffbeb; }
+    .overview-panel-title { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+    .overview-title-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; color: #2563eb; background: #eff6ff; }
+    .order-card { background: white; border-radius: 12px; padding: 18px; border: 1px solid #dfe7f1; margin-bottom: 18px; box-shadow: none !important; }
+    .order-card h6 { font-size: .92rem; }
+    .order-card > form > small, .order-card .customer-instructions, .order-card .customer-instructions + * { font-size: .76rem; line-height: 1.4; }
+    .customer-instructions { white-space: pre-line; overflow-wrap: anywhere; font-size: .76rem; line-height: 1.4; }
+    .order-progress { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: start; gap: 0; margin: 16px 0 !important; }
+    .order-progress-step { position: relative; min-width: 0; color: #64748b; text-align: center; }
+    .order-progress-step:not(:last-child)::after { content: ''; position: absolute; top: 9px; left: 58%; width: 84%; height: 2px; background: #dbe5f1; z-index: 0; }
+    .order-progress-step i { position: relative; z-index: 1; display: block; width: 20px; height: 20px; margin: 0 auto 6px; background: #fff; font-size: 1rem; line-height: 20px; }
+    .order-progress-step span { display: block; padding: 0 3px; font-size: .67rem; line-height: 1.2; }
+    .overview-side-card h6 { font-size: 1rem; }
+    .overview-side-card p, .overview-side-card label, .overview-side-card .alert { font-size: .78rem !important; }
+    .overview-side-card .form-control, .overview-side-card .form-select, .overview-side-card .btn { font-size: .86rem; }
+    .btn-update { background-color: #6366f1; color: white; border: none; border-radius: 8px; padding: 8px; width: 100%; font-weight: 600; }
+    .dashboard-section { display: none; }
+    #overview-section { display: block; }
+    .complete-modal-content { border: 0; border-radius: 22px; overflow: hidden; }
+    .complete-modal-icon { width: 88px; height: 88px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: #dcfce7; color: #16a34a; font-size: 44px; }
+    .complete-modal-order { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; }
+</style>
+
+<!-- SIDEBAR -->
+<link rel="stylesheet" href="~/css/dashboard-sidebar.css" asp-append-version="true" />
+<partial name="_DashboardSidebar" model="new DashboardSidebarVM { IsOwner = false }" />
+
+<div class="main-content">
+    <!-- HEADER (right side): audio alert switch beside the live time, with the date below the time -->
+    <header class="staff-header">
+        <div class="d-flex align-items-center gap-3 ms-auto">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="audioAlertToggle" checked>
+                <label class="form-check-label" for="audioAlertToggle">Audio Alert</label>
+            </div>
+            <div class="staff-clock">
+                <div id="staffTime">@DateTime.Now.ToString("h:mm:ss tt")</div>
+                <div id="staffDate">@DateTime.Now.ToString("ddd, MMM dd, yyyy")</div>
+            </div>
+        </div>
+    </header>
+    <script>
+        (function () {
+            const time = document.getElementById('staffTime');
+            const date = document.getElementById('staffDate');
+            function tick() {
+                const now = new Date();
+                time.textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+                date.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
+            }
+            tick();
+            setInterval(tick, 1000);
+        })();
+    </script>
+
+    <!-- PROCESS OUTPUT NOTIFICATION -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-primary alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background-color: #6366f1; color: white;">
+            <i class="bi bi-cpu-fill me-2"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- NEW BOOKING AUDIO ALERT BANNER -->
+    <!-- Flex layout lives on the inner div: Bootstrap's d-flex (!important) would override the hidden attribute. -->
+    <div id="newBookingAlert" class="alert alert-danger border-0 shadow-sm mb-4" role="alert" hidden>
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <i class="bi bi-bell-fill me-2"></i>
+            <strong>New booking received!</strong>
+            <span id="newBookingAlertCount"></span>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" id="newBookingAlertView" class="btn btn-sm btn-light fw-bold">View Bookings</button>
+            <button type="button" id="newBookingAlertAck" class="btn btn-sm btn-dark fw-bold">Stop Sound</button>
+        </div>
+      </div>
+    </div>
+    <div id="audioUnlockHint" class="alert alert-warning small py-2 mb-4" role="status" hidden>
+        <i class="bi bi-volume-mute me-1"></i> Click anywhere on the page to enable the booking sound alert.
+    </div>
+
+    <!-- SECTION 1: OVERVIEW -->
+    <div id="overview-section" class="dashboard-section">
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="stat-card overview-stat orders">
+                    <div class="overview-stat-icon"><i class="bi bi-bag-check"></i></div>
+                    <div><div class="overview-stat-label">TODAY'S ORDERS</div><div class="overview-stat-value">@Model.TodayOrderCount</div></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card overview-stat pending">
+                    <div class="overview-stat-icon"><i class="bi bi-calendar2-event"></i></div>
+                    <div><div class="overview-stat-label">PENDING BOOKINGS</div><div class="overview-stat-value">@Model.NewBookings.Count</div></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card overview-stat cash">
+                    <div class="overview-stat-icon"><i class="bi bi-coin"></i></div>
+                    <div><div class="overview-stat-label">CASH COLLECTION TODAY</div><div class="overview-stat-value">&#8369;@Model.CashCollectionToday.ToString("N2")</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+
+                <div class="stat-card mb-4">
+                    <h5 class="overview-panel-title fw-bold mb-4"><span class="overview-title-icon"><i class="bi bi-device-ssd"></i></span>Currently being washed <span class="badge bg-primary">@Model.ActiveQueue.Count Active</span></h5>
+                    <div class="row">
+                        @if(Model.ActiveQueue.Count == 0) {
+                            <div class="col-12 text-center py-4 text-muted">No active laundry orders in the queue.</div>
+                        }
+                        @foreach(var item in Model.ActiveQueue) {
+                            <div class="col-12">
+                                <div class="order-card shadow-sm bg-white border">
+                                    <form asp-action="UpdateStatus" method="post">
+                                        <input type="hidden" name="orderId" value="@item.Id" />
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <h6 class="fw-bold m-0">@item.CustomerName @if (item.IsRush) { <span class="badge bg-danger ms-1">RUSH</span> } @if (item.IsRegular) { <span class="badge bg-warning text-dark ms-1"><i class="bi bi-star-fill"></i> REGULAR</span> }</h6>
+                                            <span class="@(item.Status == "Ready" ? "text-success" : "text-primary") fw-bold small">@(item.Status == "Ready" ? "Ready for Pickup" : item.Status)</span>
+                                        </div>
+                                        <small class="text-muted">#BK-@item.Id • @item.ServiceType (@item.Weight kg)</small>
+                                        @if (!string.IsNullOrWhiteSpace(item.CustomerNotes))
+                                        {
+                                            <div class="small text-muted mt-2">
+                                                <span class="fw-semibold">Customer instructions</span>
+                                                <div class="customer-instructions">@item.CustomerNotes</div>
+                                            </div>
+                                        }
+                                        <div class="order-progress">
+                                            <div class="order-progress-step"><i class="bi bi-check-circle-fill text-primary"></i><span>Received</span></div>
+                                            @{
+                                                // Stage order shown on the card; a stage is checked once the order has reached it.
+                                                string[] stages = ["Washing", "Drying", "Folding", "Ready"];
+                                                int reached = Array.IndexOf(stages, item.Status);
+                                            }
+                                            @for (int stage = 0; stage < stages.Length; stage++)
+                                            {
+                                                <div class="order-progress-step"><i class="bi @(stage <= reached ? "bi-check-circle-fill text-primary" : "bi-circle")"></i><span>@(stages[stage] == "Ready" ? "Ready for Pickup" : stages[stage])</span></div>
+                                            }
+                                        </div>
+                                        <select name="status" class="form-select form-select-sm mb-2" required>
+                                            <option value="" disabled selected>Change phase...</option>
+                                            <option value="Washing">Washing</option>
+                                            <option value="Drying">Drying</option>
+                                            <option value="Folding">Folding</option>
+                                            <option value="Ready">Ready for Pickup</option>
+                                        </select>
+                                        @if (item.HasShopSupplies)
+                                        {
+                                            <div class="small border rounded p-2 mb-2">
+                                                <div class="fw-semibold">Shop supplies: @item.ShopSupplies</div>
+                                                @if (item.SuppliesIssued)
+                                                {
+                                                    <span class="text-success">Usage recorded. Changing status will not deduct again.</span>
+                                                }
+                                                else
+                                                {
+                                                    <label class="d-flex align-items-start gap-2 mt-2" for="active-supplies-@item.Id">
+                                                        <input id="active-supplies-@item.Id" type="checkbox" class="form-check-input flex-shrink-0" name="confirmShopSupplies" value="true" />
+                                                        <span>I am issuing the listed shop pieces now. Record their usage once.</span>
+                                                    </label>
+                                                    <span class="text-muted">For older active orders, leave unchecked if already used before inventory tracking. A status change alone will not deduct stock.</span>
+                                                }
+                                            </div>
+                                        }
+                                        <button type="submit" class="btn-update">Update Status</button>
+                                    </form>
+                                    <div class="d-flex justify-content-between align-items-center mt-3 small">
+                                        <span class="text-muted">Balance: <strong>&#8369;@item.BalanceDue.ToString("N2")</strong></span>
+                                        @if (item.IsFullyPaid)
+                                        {
+                                            <span class="badge bg-success">Paid</span>
+                                        }
+                                        else if (item.PendingGCashAmount > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">GCash awaiting verification</span>
+                                        }
+                                    </div>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary w-100 fw-bold mt-2 actual-weight-button"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#actualWeightModal"
+                                            data-booking-id="@item.Id"
+                                            data-booking-reference="#BK-@item.Id"
+                                            data-customer-name="@item.CustomerName"
+                                            data-current-weight="@item.Weight.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-per-kg-rate="@item.PerKgRateTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-per-load-rate="@item.PerLoadRateTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-fixed-amount="@item.FixedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-reward-discount="@item.RewardDiscount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)">
+                                        <i class="bi bi-speedometer2 me-1"></i> Record / Edit Actual Weight
+                                    </button>
+                                    @if (!item.IsFullyPaid)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-outline-primary w-100 fw-bold mt-2 payment-button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#recordPaymentModal"
+                                                data-booking-reference="#BK-@item.Id"
+                                                data-booking-code="@item.BookingCode"
+                                                data-customer-name="@item.CustomerName"
+                                                data-total="@item.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-paid="@item.PaidAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-balance="@item.BalanceDue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-pending-gcash="@item.PendingGCashAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-method="@(item.PendingGCashAmount > 0 ? "GCash" : "Cash")">
+                                            <i class="bi bi-cash-coin me-1"></i>
+                                            @(item.PendingGCashAmount > 0 ? "Verify GCash" : "Record Payment")
+                                        </button>
+                                    }
+                                    @if (item.Status == "Ready")
+                                    {
+                                        <form asp-action="SendPickupSms" method="post" class="mt-2"
+                                              onsubmit="return confirm('Send the Ready for Pickup SMS to this customer?');">
+                                            <input type="hidden" name="bookingId" value="@item.Id" />
+                                            <button type="submit" class="btn btn-outline-success w-100 fw-bold">
+                                                <i class="bi bi-chat-dots me-1"></i> Send Pickup SMS
+                                            </button>
+                                        </form>
+                                    }
+                                    <div class="d-flex gap-2 mt-2">
+                                        @if (item.Status == "Ready")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-success flex-fill fw-bold"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#completeOrderModal"
+                                                    data-booking-id="@item.Id"
+                                                    data-customer-name="@item.CustomerName">
+                                                <i class="bi bi-check-circle me-1"></i> Complete Order
+                                            </button>
+                                        }
+                                        <form asp-action="CancelOrder" method="post" class="flex-fill" onsubmit="return prepareCancellationReason(this);">
+                                            <input type="hidden" name="bookingId" value="@item.Id" />
+                                            <input type="hidden" name="reason" />
+                                            <button type="submit" class="btn btn-outline-danger w-100 fw-bold">
+                                                <i class="bi bi-x-circle me-1"></i> Cancel
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="stat-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold mb-0">Pending Customer Accounts</h5>
+                        <span class="badge bg-warning text-dark">@Model.PendingCustomers.Count Pending</span>
+                    </div>
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Customer</th><th>Contact Number</th><th>Email</th><th>Registered</th><th class="text-end">Action</th></tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PendingCustomers.Count == 0)
+                            {
+                                <tr><td colspan="5" class="text-center py-3 text-muted">No customer accounts waiting for approval.</td></tr>
+                            }
+                            @foreach (var customer in Model.PendingCustomers)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@customer.FullName</td>
+                                    <td class="fw-semibold">
+                                        @if (string.IsNullOrWhiteSpace(customer.ContactNumber))
+                                        {
+                                            <span class="text-muted">None</span>
+                                        }
+                                        else
+                                        {
+                                            <a href="tel:@customer.ContactNumber" class="text-decoration-none"><i class="bi bi-telephone me-1"></i>@customer.ContactNumber</a>
+                                        }
+                                    </td>
+                                    <td>@customer.Email</td>
+                                    <td class="small text-muted">@(customer.CreatedAt?.ToString("MMM d, yyyy · h:mm tt") ?? "")</td>
+                                    <td class="text-end">
+                                        <form asp-action="ApproveCustomer" method="post" class="d-inline" onsubmit="return confirm('Approve this customer account?');">
+                                            <input type="hidden" name="id" value="@customer.Id" />
+                                            <button type="submit" class="btn btn-sm btn-success px-3">
+                                                <i class="bi bi-person-check-fill me-1"></i> Approve
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (Model.PendingCustomers.Count > 0)
+                    {
+                        <div class="small text-muted mt-3"><i class="bi bi-info-circle me-1"></i>Call or text the customer to verify the account before approving.</div>
+                    }
+                </div>
+
+                <div class="stat-card">
+                    <h5 class="fw-bold mb-4">New Bookings (Pending Approval)</h5>
+                    <table class="table align-middle">
+                        <thead class="table-light"><tr><th>Customer</th><th>Service</th><th>Weight</th><th>Action</th></tr></thead>
+                        <tbody>
+                            @if(Model.NewBookings.Count == 0) {
+                                <tr><td colspan="4" class="text-center py-3 text-muted">No new bookings from customers.</td></tr>
+                            }
+                            @foreach(var b in Model.NewBookings) {
+                                <tr>
+                                    <td class="fw-bold">
+                                        @b.CustomerName @if (b.IsRush) { <span class="badge bg-danger ms-1">RUSH</span> }
+                                        @if (b.IsRegular) { <span class="badge bg-warning text-dark ms-1"><i class="bi bi-star-fill"></i> REGULAR</span> }
+                                        @if (b.ScheduledAt is DateTime scheduledAt)
+                                        {
+                                            <div class="small fw-normal text-muted mt-1">
+                                                <i class="bi bi-calendar-check me-1"></i>Drop-off @scheduledAt.ToString("MMM dd, h:mm tt")
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        @b.ServiceType
+                                        @if (!string.IsNullOrWhiteSpace(b.CustomerNotes))
+                                        {
+                                            <div class="small text-muted mt-2">
+                                                <span class="fw-semibold">Customer instructions</span>
+                                                <div class="customer-instructions">@b.CustomerNotes</div>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>@b.Weight kg</td>
+                                    <td>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary px-3 actual-weight-button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#actualWeightModal"
+                                                data-booking-id="@b.Id"
+                                                data-booking-reference="#BK-@b.Id"
+                                                data-customer-name="@b.CustomerName"
+                                                data-current-weight="@b.Weight.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-per-kg-rate="@b.PerKgRateTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-per-load-rate="@b.PerLoadRateTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-fixed-amount="@b.FixedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-reward-discount="@b.RewardDiscount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)">
+                                            <i class="bi bi-speedometer2 me-1"></i> Actual Weight
+                                        </button>
+                                        @if (!b.IsFullyPaid)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary px-3 payment-button"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#recordPaymentModal"
+                                                    data-booking-reference="#BK-@b.Id"
+                                                    data-booking-code="@b.BookingCode"
+                                                    data-customer-name="@b.CustomerName"
+                                                    data-total="@b.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-paid="@b.PaidAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-balance="@b.BalanceDue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-pending-gcash="@b.PendingGCashAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-method="@(b.PendingGCashAmount > 0 ? "GCash" : "Cash")">
+                                                <i class="bi bi-cash-coin me-1"></i>
+                                                @(b.PendingGCashAmount > 0 ? "Verify GCash" : "Payment")
+                                            </button>
+                                        }
+                                        <form asp-action="AcceptBooking" method="post" class="d-inline">
+                                            <input type="hidden" name="id" value="@b.Id" />
+                                            @if (b.HasShopSupplies && !b.SuppliesIssued)
+                                            {
+                                                <div class="small text-start border rounded p-2 mb-2">
+                                                    <div class="fw-semibold">Shop supplies: @b.ShopSupplies</div>
+                                                    <label class="d-flex align-items-start gap-2 mt-2" for="pending-supplies-@b.Id">
+                                                        <input id="pending-supplies-@b.Id" type="checkbox" class="form-check-input flex-shrink-0" name="confirmShopSupplies" value="true" required />
+                                                        <span>I am starting this order and issuing these shop pieces now. Deduct them once.</span>
+                                                    </label>
+                                                </div>
+                                            }
+                                            <button type="submit" class="btn btn-sm btn-primary px-3">Accept &amp; Start</button>
+                                        </form>
+                                        <form asp-action="CancelOrder" method="post" class="d-inline" onsubmit="return prepareCancellationReason(this);">
+                                            <input type="hidden" name="bookingId" value="@b.Id" />
+                                            <input type="hidden" name="reason" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger px-3">Cancel</button>
+                                        </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="stat-card overview-side-card mb-4">
+                    <h6 class="fw-bold mb-1">Record / Verify Payment</h6>
+                    <p class="small text-muted mb-3">Accepts #BK-14, BK-14, 14, or the full EZK reference.</p>
+                    <form asp-action="RecordPayment" method="post">
+                        <input type="text" name="OrderID" class="form-control bg-light mb-2" placeholder="#BK-14 or EZK-..." required>
+                        <input type="number" name="Amount" class="form-control bg-light mb-2" placeholder="0.00" min="0.01" step="0.01" required>
+                        <select name="pm" class="form-select mb-3"><option value="Cash">Cash</option><option value="GCash">GCash</option></select>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Record Payment</button>
+                    </form>
+                </div>
+
+                <div class="stat-card overview-side-card mb-4 border-start border-warning border-4">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Send Downtime Alert</h6>
+                    <p class="small text-muted mb-3">Notify customers about delays, such as a power outage.</p>
+                    @if (!Model.SmsConfigured)
+                    {
+                        <div class="alert alert-secondary small py-2 mb-3">
+                            <i class="bi bi-info-circle me-1"></i> SMS is not set up yet. Alerts are still saved to the customers' dashboards.
+                        </div>
+                    }
+                    <form asp-action="SendDowntimeAlert" method="post" onsubmit="return confirm('Send this downtime alert to the selected customers?');">
+                        <label for="downtimeMessage" class="visually-hidden">Downtime message</label>
+                        <textarea id="downtimeMessage" name="message" class="form-control bg-light mb-2" rows="3" minlength="5" maxlength="300" required
+                                  placeholder="e.g. Power outage in our area. Laundry may be delayed by about 2 hours."></textarea>
+                        <label for="downtimeAudience" class="small fw-bold text-muted mb-1">Send to</label>
+                        <select id="downtimeAudience" name="audience" class="form-select mb-3">
+                            <option value="ActiveOrders">Customers with active orders</option>
+                            <option value="All">All active customers</option>
+                        </select>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="sendSms" value="true" id="downtimeSms" checked="@(Model.SmsConfigured ? "checked" : null)" />
+                            <label class="form-check-label small" for="downtimeSms">Also send as SMS</label>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold">Send Downtime Alert</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SECTION: ACTIVE QUEUE -->
+    <div id="queue-section" class="dashboard-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Active Queue</h2>
+                <p class="text-muted mb-0">Ongoing laundry orders from Washing until Ready for Pickup.</p>
+            </div>
+            <span class="badge bg-primary fs-6">@Model.ActiveQueue.Count Active</span>
+        </div>
+
+        <div class="stat-card p-0 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4 py-3">Booking</th>
+                            <th class="py-3">Customer</th>
+                            <th class="py-3">Services</th>
+                            <th class="py-3">Weight</th>
+                            <th class="py-3">Payment</th>
+                            <th class="py-3">Current Status</th>
+                            <th class="px-4 py-3 text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.ActiveQueue.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-list-check fs-2 d-block mb-2"></i>
+                                    No active laundry orders in the queue.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.ActiveQueue)
+                        {
+                            string statusBadge = item.Status switch
+                            {
+                                "Ready" => "bg-success",
+                                "Folding" => "bg-info text-dark",
+                                "Drying" => "bg-warning text-dark",
+                                _ => "bg-primary"
+                            };
+                            <tr>
+                                <td class="px-4 py-3 fw-bold">#BK-@item.Id</td>
+                                <td class="py-3">@item.CustomerName @if (item.IsRush) { <span class="badge bg-danger ms-1">RUSH</span> } @if (item.IsRegular) { <span class="badge bg-warning text-dark ms-1"><i class="bi bi-star-fill"></i> REGULAR</span> }</td>
+                                <td class="py-3">
+                                    @item.ServiceType
+                                    @if (!string.IsNullOrWhiteSpace(item.CustomerNotes))
+                                    {
+                                        <div class="small text-muted mt-2">
+                                            <span class="fw-semibold">Customer instructions</span>
+                                            <div class="customer-instructions">@item.CustomerNotes</div>
+                                        </div>
+                                    }
+                                </td>
+                                <td class="py-3">@item.Weight kg</td>
+                                <td class="py-3">
+                                    @if (item.IsFullyPaid)
+                                    {
+                                        <span class="badge bg-success">Paid</span>
+                                    }
+                                    else if (item.PendingGCashAmount > 0)
+                                    {
+                                        <span class="badge bg-warning text-dark">GCash pending</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">&#8369;@item.BalanceDue.ToString("N2") due</span>
+                                    }
+                                </td>
+                                <td class="py-3"><span class="badge @statusBadge">@(item.Status == "Ready" ? "Ready for Pickup" : item.Status)</span></td>
+                                <td class="px-4 py-3 text-end">
+                                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary actual-weight-button"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#actualWeightModal"
+                                            data-booking-id="@item.Id"
+                                            data-booking-reference="#BK-@item.Id"
+                                            data-customer-name="@item.CustomerName"
+                                            data-current-weight="@item.Weight.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-per-kg-rate="@item.PerKgRateTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-per-load-rate="@item.PerLoadRateTotal.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-fixed-amount="@item.FixedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-reward-discount="@item.RewardDiscount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)">
+                                        <i class="bi bi-speedometer2 me-1"></i> Weight
+                                    </button>
+                                    @if (!item.IsFullyPaid)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary payment-button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#recordPaymentModal"
+                                                data-booking-reference="#BK-@item.Id"
+                                                data-booking-code="@item.BookingCode"
+                                                data-customer-name="@item.CustomerName"
+                                                data-total="@item.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-paid="@item.PaidAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-balance="@item.BalanceDue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-pending-gcash="@item.PendingGCashAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                                data-method="@(item.PendingGCashAmount > 0 ? "GCash" : "Cash")">
+                                            @(item.PendingGCashAmount > 0 ? "Verify GCash" : "Record Payment")
+                                        </button>
+                                    }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 3. SECTION: PROCESS WALK-IN (DYNAMIC & FULL DETAILS) -->
+    <!-- ============================================== -->
+    <div id="walkin-section" class="dashboard-section">
+        <h2 class="fw-bold mb-4">Process Walk-in Order</h2>
+        <div class="stat-card">
+            <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-plus-circle me-2"></i> Customer and Laundry Details</h5>
+            <form asp-action="ProcessWalkIn" method="post" id="walkInForm">
+                <input type="hidden" name="requestToken" value="@Model.WalkInToken" />
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label for="walkInCustomerName" class="fw-bold small text-muted mb-2">Customer Name</label>
+                        <input type="text" name="customerName" id="walkInCustomerName" class="form-control py-2" placeholder="e.g. Maria Santos" value="@Model.WalkIn.CustomerName" maxlength="150" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="walkInContact" class="fw-bold small text-muted mb-2">Contact Number</label>
+                        <input type="text" name="contact" id="walkInContact" class="form-control py-2" placeholder="e.g. 09XXXXXXXXX" value="@Model.WalkIn.Contact" maxlength="20" required />
+                    </div>
+                </div>
+
+                <!-- DYNAMIC SERVICE CHOICES GALAING SA OWNER PRICING -->
+                <h6 class="fw-bold text-primary mb-3 mt-4 border-bottom pb-2">Select Services & Add-ons (Prices loaded from Owner Portal)</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="form-check card p-3 border">
+                            <input class="form-check-input walkin-core-service" type="checkbox" id="w1" value="Washing" checked="@selectedWalkInServices.Contains("Washing")" onchange="calcWalkIn()">
+                            <label class="form-check-label fw-bold ms-2" for="w1">Washing (&#8369;@WalkInPrice("Washing", 25m).ToString("N2")/load)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check card p-3 border">
+                            <input class="form-check-input walkin-core-service" type="checkbox" id="w2" value="Drying" checked="@selectedWalkInServices.Contains("Drying")" onchange="calcWalkIn()">
+                            <label class="form-check-label fw-bold ms-2" for="w2">Drying (&#8369;@WalkInPrice("Drying", 25m).ToString("N2")/load)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check card p-3 border">
+                            <input class="form-check-input walkin-core-service" type="checkbox" id="w3" value="Folding" checked="@selectedWalkInServices.Contains("Folding")" onchange="calcWalkIn()">
+                            <label class="form-check-label fw-bold ms-2" for="w3">Folding (&#8369;@WalkInPrice("Folding", 10m).ToString("N2")/load)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-3 mt-4 border-bottom pb-2">Choose Service Method</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="card p-3 border h-100">
+                            <span class="form-check">
+                                <input class="form-check-input walkin-service-mode" type="radio" name="serviceMode" value="Full-Service" checked="@(Model.WalkIn.ServiceMode != "Self Service")" onchange="syncWalkInRush(); calcWalkIn();" required>
+                                <span class="form-check-label fw-bold ms-2">Full-Service</span>
+                            </span>
+                            <small class="text-muted ms-4">Laundry staff handles the selected services.</small>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="card p-3 border h-100">
+                            <span class="form-check">
+                                <input class="form-check-input walkin-service-mode" type="radio" name="serviceMode" value="Self Service" checked="@(Model.WalkIn.ServiceMode == "Self Service")" onchange="syncWalkInRush(); calcWalkIn();" required>
+                                <span class="form-check-label fw-bold ms-2">Self-Service (DIY)</span>
+                            </span>
+                            <small class="text-muted ms-4">Customer operates the machine. No separate Self-Service fee.</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h6 class="fw-bold text-primary mb-0">Soap &amp; Softener Inventory (per piece)</h6>
+                    <a href="/Inventory" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-seam me-1"></i> View Inventory</a>
+                </div>
+                <p class="small text-muted">Only shop supplies are charged and deducted from stock. Customer-provided supplies have no shop-product charge.</p>
+                @if (!Model.Inventory.IsReady)
+                {
+                    <div class="alert alert-warning" role="alert">Shop inventory is not ready. <a href="/Inventory" class="alert-link">Open inventory</a> for setup. Orders with customer-provided supplies or no supplies can still be processed.</div>
+                }
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="card p-3 border h-100">
+                            <label for="walkInDetergentSource" class="fw-bold mb-1">Detergent</label>
+                            <div class="small text-primary mb-1">&#8369;@WalkInPrice("Powder", 15m).ToString("N2") per shop piece</div>
+                            <div class="small text-muted mb-3">Shop stock: <strong>@(Model.Inventory.IsReady ? $"{powderStock?.Quantity ?? 0} piece(s)" : "Not available")</strong></div>
+                            <select name="detergentSource" id="walkInDetergentSource" class="form-select" required onchange="calcWalkIn()">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.WalkIn.DetergentSource))">Choose supply source...</option>
+                                <option value="Shop" selected="@(Model.WalkIn.DetergentSource == "Shop")" disabled="@(!Model.Inventory.IsReady || powderStock == null || powderStock.Quantity <= 0)">Shop products: use Walk-in (POS)</option>
+                                <option value="Customer" selected="@(Model.WalkIn.DetergentSource == "Customer")">Customer provides their own</option>
+                                <option value="None" selected="@(Model.WalkIn.DetergentSource == "None")">Not needed</option>
+                            </select>
+                            <div id="walkInPowderQuantityGroup" class="mt-3" hidden>
+                                <label for="walkInPowderQuantity" class="small fw-bold mb-1">Quantity to issue (pieces)</label>
+                                <input type="number" name="powderQuantity" id="walkInPowderQuantity" class="form-control" min="1" max="20" step="1" value="@Model.WalkIn.PowderQuantity" disabled oninput="calcWalkIn()" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-3 border h-100">
+                            <label for="walkInSoftenerSource" class="fw-bold mb-1">Fabric Conditioner</label>
+                            <div class="small text-primary mb-1">&#8369;@WalkInPrice("Downy", 15m).ToString("N2") per shop piece</div>
+                            <div class="small text-muted mb-3">Shop stock: <strong>@(Model.Inventory.IsReady ? $"{downyStock?.Quantity ?? 0} piece(s)" : "Not available")</strong></div>
+                            <select name="softenerSource" id="walkInSoftenerSource" class="form-select" required onchange="calcWalkIn()">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.WalkIn.SoftenerSource))">Choose supply source...</option>
+                                <option value="Shop" selected="@(Model.WalkIn.SoftenerSource == "Shop")" disabled="@(!Model.Inventory.IsReady || downyStock == null || downyStock.Quantity <= 0)">Shop products: use Walk-in (POS)</option>
+                                <option value="Customer" selected="@(Model.WalkIn.SoftenerSource == "Customer")">Customer provides their own</option>
+                                <option value="None" selected="@(Model.WalkIn.SoftenerSource == "None")">Not needed</option>
+                            </select>
+                            <div id="walkInDownyQuantityGroup" class="mt-3" hidden>
+                                <label for="walkInDownyQuantity" class="small fw-bold mb-1">Quantity to issue (pieces)</label>
+                                <input type="number" name="downyQuantity" id="walkInDownyQuantity" class="form-control" min="1" max="20" step="1" value="@Model.WalkIn.DownyQuantity" disabled oninput="calcWalkIn()" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="walkInIssueSuppliesGroup" class="alert alert-info mb-4" hidden>
+                    <div class="form-check">
+                        <input type="checkbox" name="issueShopSupplies" id="walkInIssueSupplies" value="true" class="form-check-input" />
+                        <label for="walkInIssueSupplies" class="form-check-label">I have issued these shop supplies. Saving deducts the quantities from inventory.</label>
+                    </div>
+                    <div class="small mt-2" id="walkInStockDeduction" aria-live="polite"></div>
+                </div>
+
+                <!-- WEIGHT & RUSH -->
+                <div class="row g-4 mb-5 align-items-end">
+                    <div class="col-md-6">
+                        <label for="wWeight" class="fw-bold small text-muted mb-2">Actual Weight (kg)</label>
+                        <input type="number" name="weight" id="wWeight" class="form-control py-2" placeholder="0.00" value="@(Model.WalkIn.Weight > 0 ? Model.WalkIn.Weight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" min="0.01" max="1000" step="0.01" oninput="calcWalkIn()" required />
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check card p-3 border">
+                            <input class="form-check-input" type="checkbox" id="wRush" name="isRush" value="true" checked="@Model.WalkIn.IsRush" onchange="calcWalkIn()">
+                            <label class="form-check-label fw-bold ms-2 text-danger" for="wRush">Prioritize as Rush Order (+&#8369;@WalkInPrice("RushFee", 75m).ToString("N2"))</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden Input para ipasa yung listahan ng selected services sa controller (ex: "Washing, Folding") -->
+                <input type="hidden" name="services" id="walkInServices" />
+
+                <!-- REAL-TIME CALCULATOR OUTPUT -->
+                <div class="p-4 rounded-4 bg-light text-end mb-4 border shadow-sm">
+                    <span class="text-muted fw-bold small">TOTAL AMOUNT DUE:</span>
+                    <h2 class="fw-bold text-primary m-0" id="walkin-total">₱0.00</h2>
+                    <input type="hidden" name="totalAmount" id="hTotalAmount" />
+                </div>
+
+                <button type="submit" id="walkInSubmit" class="btn btn-primary w-100 py-3 fw-bold shadow" style="background:#6366f1; border-radius: 10px;">Process and Save Walk-in Order</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SECTION: SELF-SERVICE MACHINES -->
+    <div id="machines-section" class="dashboard-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Self-Service Machines</h2>
+                <p class="text-muted mb-0">Update each machine so customers can see which washers and dryers are free before going to the shop.</p>
+            </div>
+            @if (Model.Machines.IsReady)
+            {
+                <div class="text-end">
+                    <span class="badge bg-success fs-6 mb-1">@Model.Machines.AvailableOf("Washer") / @Model.Machines.CountOf("Washer") washers free</span><br />
+                    <span class="badge bg-success fs-6">@Model.Machines.AvailableOf("Dryer") / @Model.Machines.CountOf("Dryer") dryers free</span>
+                </div>
+            }
+        </div>
+
+        @if (!Model.Machines.IsReady)
+        {
+            <div class="alert alert-warning" role="alert">
+                Machine monitoring is not set up yet. Run <code>migrations/20261021_self_service_machines.sql</code> in phpMyAdmin.
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var machine in Model.Machines.Machines)
+                {
+                    string badge = machine.Status switch
+                    {
+                        "Available" => "bg-success",
+                        "In Use" => "bg-warning text-dark",
+                        _ => "bg-secondary"
+                    };
+                    <div class="col-md-6 col-xl-3">
+                        <div class="stat-card h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="fw-bold mb-0">
+                                    <i class="bi @(machine.Type == "Washer" ? "bi-water" : "bi-wind") me-1 text-primary"></i>@machine.Name
+                                </h6>
+                                <span class="badge @badge">@machine.Status</span>
+                            </div>
+                            <small class="text-muted d-block mb-3">Updated @machine.UpdatedAt.ToString("MMM dd, h:mm tt")</small>
+                            <div class="d-flex gap-1 flex-wrap">
+                                @foreach (var status in EZKLaundrySystem.Data.MachineStore.Statuses)
+                                {
+                                    <form asp-action="UpdateMachineStatus" method="post" class="flex-fill">
+                                        <input type="hidden" name="machineId" value="@machine.Id" />
+                                        <input type="hidden" name="status" value="@status" />
+                                        <button type="submit" class="btn btn-sm w-100 @(machine.Status == status ? "btn-primary" : "btn-outline-secondary")" disabled="@(machine.Status == status)">@status</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- 4. SECTION: PICKUP METHOD -->
+    <div id="pickup-section" class="dashboard-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Pickup Methods</h2>
+                <p class="text-muted mb-0">Check each booking's status. Ready for Pickup means the laundry can be collected at the shop by the customer or a third-party rider. The shop does not offer delivery.</p>
+            </div>
+            <span class="badge bg-primary fs-6">@Model.PickupMethods.Count Active</span>
+        </div>
+
+        <div class="stat-card p-0 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4 py-3">Booking</th>
+                            <th class="py-3">Customer</th>
+                            <th class="py-3">Method</th>
+                            <th class="py-3">Contact / Location</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PickupMethods.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-5">
+                                    <i class="bi bi-bag-check fs-2 d-block mb-2"></i>
+                                    No active bookings to be claimed.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var pickup in Model.PickupMethods)
+                        {
+                            string statusBadge = pickup.Status == "Ready" ? "bg-success" : "bg-primary";
+                            <tr>
+                                <td class="px-4 py-3">
+                                    <div class="fw-bold">@pickup.BookingCode</div>
+                                    <small class="text-muted">#@pickup.Id</small>
+                                </td>
+                                <td class="py-3 fw-semibold">@pickup.CustomerName</td>
+                                <td class="py-3"><span class="badge bg-secondary">@pickup.Method</span></td>
+                                <td class="py-3">
+                                    <div><i class="bi bi-telephone me-1 text-muted"></i>@pickup.ContactNumber</div>
+                                    <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>@pickup.Location</small>
+                                </td>
+                                <td class="px-4 py-3"><span class="badge @statusBadge">@(pickup.Status == "Ready" ? "Ready for Pickup" : pickup.Status)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. SECTION: MY SHIFT -->
+    <div id="shift-section" class="dashboard-section">
+        @{
+            var shift = Model.Shift;
+            var now = DateTime.Now;
+            var worked = shift.WorkedToday(now);
+        }
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">My Shift</h2>
+                <p class="text-muted mb-0">Record your Time In and Time Out, and see your work for today.</p>
+            </div>
+            <span class="badge @(shift.IsOnDuty ? "bg-success" : "bg-secondary")">@(shift.IsOnDuty ? "On Duty" : "Off Duty")</span>
+        </div>
+
+        @if (!shift.IsReady)
+        {
+            <div class="alert alert-warning" role="alert">
+                Shift tracking is not set up yet. Run <code>migrations/20261021_staff_shifts.sql</code> in phpMyAdmin.
+            </div>
+        }
+        else
+        {
+            <div class="row g-4 mb-4 text-center">
+                <div class="col-md-4">
+                    <div class="stat-card h-100">
+                        <small class="text-muted fw-bold">@(shift.IsOnDuty ? "TIMED IN AT" : "STATUS")</small>
+                        <div class="fw-bold fs-5 mt-2 mb-3">@(shift.IsOnDuty ? shift.OpenShift!.TimeIn.ToString("h:mm tt") : "Off Duty")</div>
+                        @if (shift.IsOnDuty)
+                        {
+                            <form asp-action="TimeOut" method="post" onsubmit="return confirm('Time out now?');">
+                                <button type="submit" class="btn btn-outline-danger w-100 fw-bold"><i class="bi bi-box-arrow-right me-1"></i> Time Out</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="TimeIn" method="post">
+                                <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Time In</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card h-100">
+                        <small class="text-muted fw-bold">HOURS WORKED TODAY</small>
+                        <div class="fw-bold fs-5 mt-2">@((int)worked.TotalHours)h @worked.Minutes.ToString("00")m</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card h-100">
+                        <small class="text-muted fw-bold">MY WORK TODAY</small>
+                        <div class="fw-bold fs-5 mt-2">@shift.OrdersHandledToday order(s)</div>
+                        <small class="text-muted">&#8369;@shift.PaymentsRecordedToday.ToString("N2") in payments recorded</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card p-0 overflow-hidden">
+                <table class="table align-middle mb-0 small">
+                    <thead class="table-light"><tr><th class="px-4 py-3">Time In</th><th class="py-3">Time Out</th><th class="px-4 py-3 text-end">Duration</th></tr></thead>
+                    <tbody>
+                        @if (shift.TodayShifts.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-center text-muted py-4">No shift recorded today. Press Time In to start.</td></tr>
+                        }
+                        @foreach (var entry in shift.TodayShifts)
+                        {
+                            var duration = entry.Worked(now);
+                            <tr>
+                                <td class="px-4 py-3">@entry.TimeIn.ToString("MMM dd, h:mm tt")</td>
+                                <td class="py-3">@(entry.TimeOut?.ToString("h:mm tt") ?? "On duty")</td>
+                                <td class="px-4 py-3 text-end">@((int)duration.TotalHours)h @duration.Minutes.ToString("00")m</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+</div>
+
+<!-- ACTUAL WEIGHT MODAL -->
+<div class="modal fade" id="actualWeightModal" tabindex="-1" aria-labelledby="actualWeightModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content complete-modal-content shadow-lg">
+            <form asp-action="UpdateActualWeight" method="post" onsubmit="return confirmActualWeightUpdate();">
+                <div class="modal-header border-0 px-4 pt-4 pb-2">
+                    <div>
+                        <h4 class="modal-title fw-bold" id="actualWeightModalLabel">Record Actual Weight</h4>
+                        <div class="text-muted" id="actualWeightOrderSummary"></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <input type="hidden" name="bookingId" id="actualWeightBookingId" />
+
+                    <div class="complete-modal-order mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Customer estimate/current weight</span>
+                            <strong id="previousWeightDisplay">0.00 kg</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Combined per-load rate (@Model.KgPerLoad.ToString("0.##") kg per load)</span>
+                            <strong id="perKgRateDisplay">&#8369;0.00/load</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Fixed add-ons</span>
+                            <strong id="fixedAmountDisplay">&#8369;0.00</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Loyalty discount (up to)</span>
+                            <strong id="rewardDiscountDisplay">&#8369;0.00</strong>
+                        </div>
+                    </div>
+
+                    <label for="actualWeightInput" class="form-label fw-bold">Actual measured weight (kg)</label>
+                    <input type="number"
+                           name="actualWeight"
+                           id="actualWeightInput"
+                           class="form-control form-control-lg mb-3"
+                           min="0.01"
+                           max="999.99"
+                           step="0.01"
+                           required />
+
+                    <div class="alert alert-primary d-flex justify-content-between align-items-center">
+                        <span>Recalculated order total</span>
+                        <strong class="fs-5" id="projectedOrderTotal">&#8369;0.00</strong>
+                    </div>
+                    <p class="small text-muted">
+                        Only services charged per kilogram will change. Powder, Downy, Rush Fee, and other fixed add-ons keep their existing amounts.
+                    </p>
+
+                    <div class="d-grid gap-2 d-sm-flex">
+                        <button type="button" class="btn btn-light border flex-fill py-2 fw-bold" data-bs-dismiss="modal">Go Back</button>
+                        <button type="submit" class="btn btn-primary flex-fill py-2 fw-bold">
+                            <i class="bi bi-check-circle me-1"></i> Save Actual Weight
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- RECORD / VERIFY PAYMENT MODAL -->
+<div class="modal fade" id="recordPaymentModal" tabindex="-1" aria-labelledby="recordPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content complete-modal-content shadow-lg">
+            <form asp-action="RecordPayment" method="post">
+                <div class="modal-header border-0 px-4 pt-4 pb-2">
+                    <div>
+                        <h4 class="modal-title fw-bold" id="recordPaymentModalLabel">Record Payment</h4>
+                        <div class="text-muted" id="paymentCustomerName"></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <div class="complete-modal-order mb-3">
+                        <div class="d-flex justify-content-between"><span>Order total</span><strong id="paymentOrderTotal">&#8369;0.00</strong></div>
+                        <div class="d-flex justify-content-between"><span>Already paid</span><strong id="paymentAlreadyPaid">&#8369;0.00</strong></div>
+                        <hr class="my-2" />
+                        <div class="d-flex justify-content-between text-primary"><span>Balance due</span><strong id="paymentBalanceDue">&#8369;0.00</strong></div>
+                    </div>
+
+                    <label for="paymentBookingReference" class="form-label fw-bold">Booking reference</label>
+                    <input type="text" name="OrderID" id="paymentBookingReference" class="form-control mb-3" readonly required />
+
+                    <label for="paymentAmount" class="form-label fw-bold">Amount received</label>
+                    <input type="number" name="Amount" id="paymentAmount" class="form-control mb-3" min="0.01" step="0.01" required />
+
+                    <label for="paymentMethod" class="form-label fw-bold">Payment method</label>
+                    <select name="pm" id="paymentMethod" class="form-select mb-4" required>
+                        <option value="Cash">Cash</option>
+                        <option value="GCash">GCash</option>
+                    </select>
+
+                    <div class="alert alert-warning py-2 small" id="gcashVerificationNote" hidden>
+                        Confirm this only after checking that the GCash payment was actually received.
+                    </div>
+                    <div class="d-grid gap-2 d-sm-flex">
+                        <button type="button" class="btn btn-light border flex-fill py-2 fw-bold" data-bs-dismiss="modal">Go Back</button>
+                        <button type="submit" class="btn btn-primary flex-fill py-2 fw-bold" id="paymentSubmitButton">
+                            <i class="bi bi-check-circle me-1"></i> Record Payment
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- COMPLETE ORDER CONFIRMATION MODAL -->
+<div class="modal fade" id="completeOrderModal" tabindex="-1" aria-labelledby="completeOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content complete-modal-content shadow-lg">
+            <form asp-action="CompleteOrder" method="post">
+                <div class="modal-body text-center p-4 p-md-5">
+                    <div class="complete-modal-icon mb-4" aria-hidden="true">
+                        <i class="bi bi-bag-check-fill"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2" id="completeOrderModalLabel">Complete this order?</h3>
+                    <p class="text-muted mb-4">
+                        Confirm that the laundry has been released to the customer.
+                    </p>
+                    <div class="complete-modal-order text-start mb-4">
+                        <div class="small text-muted">Selected order</div>
+                        <div class="fw-bold" id="completeOrderSummary">Order details</div>
+                    </div>
+                    <input type="hidden" name="bookingId" id="completeBookingId" />
+                    <div class="d-grid gap-2 d-sm-flex">
+                        <button type="button" class="btn btn-light border flex-fill py-2 fw-bold" data-bs-dismiss="modal">
+                            Go Back
+                        </button>
+                        <button type="submit" class="btn btn-success flex-fill py-2 fw-bold">
+                            <i class="bi bi-check-circle me-1"></i> Complete Order
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPT LOGIC (INCLUDING WALKIN REALTIME CALCULATOR) -->
+<script>
+    const actualWeightModal = document.getElementById('actualWeightModal');
+    const actualWeightInput = document.getElementById('actualWeightInput');
+    const kgPerLoad = @Model.KgPerLoad.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const loadsFor = weight => weight > 0 ? Math.ceil(weight / kgPerLoad) : 1;
+    let actualWeightPerKgRate = 0;
+    let actualWeightPerLoadRate = 0;
+    let actualWeightFixedAmount = 0;
+    let actualWeightRewardDiscount = 0;
+
+    function projectedWeightTotal(newWeight) {
+        return Math.max(0, actualWeightFixedAmount + (newWeight * actualWeightPerKgRate)
+            + (loadsFor(newWeight) * actualWeightPerLoadRate) - actualWeightRewardDiscount);
+    }
+
+    function updateProjectedWeightTotal() {
+        const newWeight = Number(actualWeightInput.value || 0);
+        document.getElementById('projectedOrderTotal').textContent =
+            `\u20B1${projectedWeightTotal(newWeight).toFixed(2)} (${loadsFor(newWeight)} load(s))`;
+    }
+
+    actualWeightModal.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        const bookingId = trigger.getAttribute('data-booking-id');
+        const reference = trigger.getAttribute('data-booking-reference');
+        const customerName = trigger.getAttribute('data-customer-name');
+        const currentWeight = Number(trigger.getAttribute('data-current-weight') || 0);
+        actualWeightPerKgRate = Number(trigger.getAttribute('data-per-kg-rate') || 0);
+        actualWeightPerLoadRate = Number(trigger.getAttribute('data-per-load-rate') || 0);
+        actualWeightFixedAmount = Number(trigger.getAttribute('data-fixed-amount') || 0);
+        actualWeightRewardDiscount = Number(trigger.getAttribute('data-reward-discount') || 0);
+
+        document.getElementById('actualWeightBookingId').value = bookingId;
+        document.getElementById('actualWeightOrderSummary').textContent = `${reference} - ${customerName}`;
+        document.getElementById('previousWeightDisplay').textContent = `${currentWeight.toFixed(2)} kg`;
+        document.getElementById('perKgRateDisplay').textContent = `\u20B1${actualWeightPerLoadRate.toFixed(2)}/load`
+            + (actualWeightPerKgRate > 0 ? ` + \u20B1${actualWeightPerKgRate.toFixed(2)}/kg` : '');
+        document.getElementById('fixedAmountDisplay').textContent = `\u20B1${actualWeightFixedAmount.toFixed(2)}`;
+        document.getElementById('rewardDiscountDisplay').textContent = `\u20B1${actualWeightRewardDiscount.toFixed(2)}`;
+        actualWeightInput.value = currentWeight.toFixed(2);
+        updateProjectedWeightTotal();
+    });
+
+    actualWeightInput.addEventListener('input', updateProjectedWeightTotal);
+
+    function confirmActualWeightUpdate() {
+        const newWeight = Number(actualWeightInput.value || 0);
+        return window.confirm(
+            `Save ${newWeight.toFixed(2)} kg (${loadsFor(newWeight)} load(s)) as the actual weight? The recalculated total will be \u20B1${projectedWeightTotal(newWeight).toFixed(2)}.`
+        );
+    }
+
+    const paymentModal = document.getElementById('recordPaymentModal');
+    const paymentMethod = document.getElementById('paymentMethod');
+
+    function updatePaymentMethodMessage() {
+        const isGCash = paymentMethod.value === 'GCash';
+        document.getElementById('gcashVerificationNote').hidden = !isGCash;
+        document.getElementById('paymentSubmitButton').innerHTML = isGCash
+            ? '<i class="bi bi-check-circle me-1"></i> Verify GCash as Paid'
+            : '<i class="bi bi-check-circle me-1"></i> Record Cash Payment';
+    }
+
+    paymentModal.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        const reference = trigger.getAttribute('data-booking-reference');
+        const bookingCode = trigger.getAttribute('data-booking-code');
+        const customerName = trigger.getAttribute('data-customer-name');
+        const total = Number(trigger.getAttribute('data-total') || 0);
+        const paid = Number(trigger.getAttribute('data-paid') || 0);
+        const balance = Number(trigger.getAttribute('data-balance') || 0);
+        const pendingGCash = Number(trigger.getAttribute('data-pending-gcash') || 0);
+        const method = trigger.getAttribute('data-method') || 'Cash';
+
+        document.getElementById('paymentBookingReference').value = reference;
+        document.getElementById('paymentCustomerName').textContent = `${reference} (${bookingCode}) - ${customerName}`;
+        document.getElementById('paymentOrderTotal').textContent = `₱${total.toFixed(2)}`;
+        document.getElementById('paymentAlreadyPaid').textContent = `₱${paid.toFixed(2)}`;
+        document.getElementById('paymentBalanceDue').textContent = `₱${balance.toFixed(2)}`;
+
+        const amountInput = document.getElementById('paymentAmount');
+        // A GCash payment already declared is verified as received; any amount above the
+        // balance is recorded as a refund by the server.
+        const verifyingGCash = method === 'GCash' && pendingGCash > 0;
+        const suggestedAmount = verifyingGCash ? pendingGCash : balance;
+        amountInput.value = suggestedAmount.toFixed(2);
+        amountInput.max = Math.max(balance, verifyingGCash ? pendingGCash : 0).toFixed(2);
+        paymentMethod.value = method;
+        updatePaymentMethodMessage();
+    });
+
+    paymentMethod.addEventListener('change', updatePaymentMethodMessage);
+
+    document.getElementById('completeOrderModal').addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        const bookingId = trigger.getAttribute('data-booking-id');
+        const customerName = trigger.getAttribute('data-customer-name');
+
+        document.getElementById('completeBookingId').value = bookingId;
+        document.getElementById('completeOrderSummary').textContent = `#BK-${bookingId} · ${customerName}`;
+    });
+
+    function prepareCancellationReason(form) {
+        const reason = window.prompt("Reason for cancelling this order:");
+        if (reason === null) return false;
+
+        const cleanedReason = reason.trim();
+        if (cleanedReason.length < 3 || cleanedReason.length > 150) {
+            window.alert("Please enter a reason between 3 and 150 characters.");
+            return false;
+        }
+
+        if (!window.confirm("Cancel this order? The record will remain in history.")) return false;
+        form.elements.reason.value = cleanedReason;
+        return true;
+    }
+
+    function showSection(sectionId, element) {
+        var sections = document.getElementsByClassName('dashboard-section');
+        for (var i = 0; i < sections.length; i++) {
+            sections[i].style.display = 'none';
+        }
+        document.getElementById(sectionId).style.display = 'block';
+        var links = document.getElementsByClassName('nav-link-staff');
+        for (var i = 0; i < links.length; i++) {
+            links[i].classList.remove('active');
+        }
+        element?.classList.add('active');
+    }
+
+    // Client preview only. The server rechecks current prices, quantities and stock on save.
+    const walkInRates = {
+        'Washing': @WalkInPrice("Washing", 25m).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        'Drying': @WalkInPrice("Drying", 25m).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        'Folding': @WalkInPrice("Folding", 10m).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        'Powder': @WalkInPrice("Powder", 15m).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        'Downy': @WalkInPrice("Downy", 15m).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        'Rush Fee': @WalkInPrice("RushFee", 75m).ToString(System.Globalization.CultureInfo.InvariantCulture)
+    };
+    const walkInInventoryReady = @(Model.Inventory.IsReady ? "true" : "false");
+    const walkInStock = { Powder: @(powderStock?.Quantity ?? 0), Downy: @(downyStock?.Quantity ?? 0) };
+    let lastWalkInSupplyChoice = '';
+    let walkInSubmitting = false;
+
+    function updateWalkInSupply(sourceId, quantityId, groupId, itemName) {
+        const source = document.getElementById(sourceId);
+        const quantity = document.getElementById(quantityId);
+        const isShop = source.value === 'Shop';
+        document.getElementById(groupId).hidden = !isShop;
+        quantity.disabled = !isShop;
+        quantity.required = isShop;
+        quantity.max = Math.max(1, Math.min(20, walkInStock[itemName]));
+        quantity.setCustomValidity('');
+        source.setCustomValidity('');
+        if (!isShop) return 0;
+
+        const pieces = Number(quantity.value);
+        if (!walkInInventoryReady || walkInStock[itemName] <= 0) {
+            source.setCustomValidity(`No shop ${itemName} stock is available. Check inventory or choose customer-provided supplies.`);
+        } else if (!Number.isInteger(pieces) || pieces < 1 || pieces > 20) {
+            quantity.setCustomValidity('Enter a whole number from 1 to 20 pieces.');
+        } else if (pieces > walkInStock[itemName]) {
+            quantity.setCustomValidity(`Only ${walkInStock[itemName]} piece(s) of ${itemName} are available.`);
+        }
+        return Number.isInteger(pieces) && pieces > 0 ? pieces : 0;
+    }
+
+    function syncWalkInRush() {
+        const selfService = document.querySelector('input[name="serviceMode"]:checked')?.value === 'Self Service';
+        const rush = document.getElementById('wRush');
+        if (selfService) rush.checked = false;
+        rush.disabled = selfService;
+    }
+
+    function calcWalkIn() {
+        const weight = Number(document.getElementById('wWeight').value) || 0;
+        const selectedServices = Array.from(document.querySelectorAll('.walkin-core-service:checked'), input => input.value);
+        const powderPieces = updateWalkInSupply('walkInDetergentSource', 'walkInPowderQuantity', 'walkInPowderQuantityGroup', 'Powder');
+        const downyPieces = updateWalkInSupply('walkInSoftenerSource', 'walkInDownyQuantity', 'walkInDownyQuantityGroup', 'Downy');
+        const detergentSource = document.getElementById('walkInDetergentSource').value;
+        const softenerSource = document.getElementById('walkInSoftenerSource').value;
+        const hasShopSupplies = detergentSource === 'Shop' || softenerSource === 'Shop';
+        const supplyChoice = `${detergentSource}:${powderPieces}|${softenerSource}:${downyPieces}`;
+        const issueCheckbox = document.getElementById('walkInIssueSupplies');
+        if (supplyChoice !== lastWalkInSupplyChoice || !hasShopSupplies) issueCheckbox.checked = false;
+        lastWalkInSupplyChoice = supplyChoice;
+        issueCheckbox.required = hasShopSupplies;
+        issueCheckbox.disabled = !hasShopSupplies;
+        document.getElementById('walkInIssueSuppliesGroup').hidden = !hasShopSupplies;
+
+        let total = selectedServices.reduce((amount, service) => amount + walkInRates[service] * loadsFor(weight), 0);
+        total += powderPieces * walkInRates.Powder + downyPieces * walkInRates.Downy;
+        if (document.getElementById('wRush').checked) total += walkInRates['Rush Fee'];
+
+        const stockChanges = [];
+        if (detergentSource === 'Shop') stockChanges.push(`Powder: ${powderPieces} piece(s), remaining ${Math.max(0, walkInStock.Powder - powderPieces)}`);
+        if (softenerSource === 'Shop') stockChanges.push(`Downy: ${downyPieces} piece(s), remaining ${Math.max(0, walkInStock.Downy - downyPieces)}`);
+        document.getElementById('walkInStockDeduction').textContent = stockChanges.join(' | ');
+        document.getElementById('walkin-total').textContent = '\u20B1' + total.toFixed(2);
+        document.getElementById('hTotalAmount').value = total.toFixed(2);
+        document.getElementById('walkInServices').value = selectedServices.join(', ');
+    }
+
+    document.getElementById('walkInForm').addEventListener('submit', function (event) {
+        if (walkInSubmitting) {
+            event.preventDefault();
+            return;
+        }
+        calcWalkIn();
+        if (!document.getElementById('walkInServices').value) {
+            event.preventDefault();
+            window.alert('Please select at least one laundry service: Washing, Drying, or Folding.');
+            document.getElementById('w1').focus();
+            return;
+        }
+        if (!this.reportValidity()) {
+            event.preventDefault();
+            return;
+        }
+
+        const sourceLabel = (sourceId, quantityId) => {
+            const source = document.getElementById(sourceId).value;
+            return source === 'Shop'
+                ? `Shop - ${document.getElementById(quantityId).value} piece(s)`
+                : source === 'Customer' ? 'Customer-provided (no charge or stock deduction)' : 'Not needed';
+        };
+        const review = [
+            'Save this walk-in order?',
+            `Customer: ${document.getElementById('walkInCustomerName').value.trim()}`,
+            `Services: ${document.getElementById('walkInServices').value}`,
+            `Actual weight: ${document.getElementById('wWeight').value} kg`,
+            `Powder: ${sourceLabel('walkInDetergentSource', 'walkInPowderQuantity')}`,
+            `Downy: ${sourceLabel('walkInSoftenerSource', 'walkInDownyQuantity')}`,
+            `Rush: ${document.getElementById('wRush').checked ? 'Yes' : 'No'}`,
+            `Total: ${document.getElementById('walkin-total').textContent}`,
+            document.getElementById('walkInIssueSupplies').checked ? 'The issued shop pieces will be deducted from inventory.' : 'No shop inventory will be deducted.'
+        ];
+        if (!window.confirm(review.join('\n'))) {
+            event.preventDefault();
+            return;
+        }
+        walkInSubmitting = true;
+        document.getElementById('walkInSubmit').disabled = true;
+        document.getElementById('walkInSubmit').textContent = 'Saving order...';
+    });
+
+    window.addEventListener('pageshow', function () {
+        walkInSubmitting = false;
+        document.getElementById('walkInSubmit').disabled = false;
+        document.getElementById('walkInSubmit').textContent = 'Process and Save Walk-in Order';
+        calcWalkIn();
+    });
+
+    syncWalkInRush();
+    calcWalkIn();
+    @if (Model.OpenWalkIn)
+    {
+        <text>showSection('walkin-section', document.getElementById('walkInNavigation'));</text>
+    }
+</script>
+<script src="~/js/dashboard-navigation.js" asp-append-version="true" data-preserve-current-section="@(Model.OpenWalkIn ? "true" : "false")"></script>
+<script src="~/js/staff-audio-alert.js" asp-append-version="true"
+        data-status-url="@Url.Action("PendingBookingStatus", "Staff")"
+        data-latest-id="@(Model.NewBookings.Count > 0 ? Model.NewBookings.Max(b => b.Id) : 0)"></script>

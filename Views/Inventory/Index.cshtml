@@ -1,0 +1,228 @@
+@model EZKLaundrySystem.Models.InventoryPageVM
+@{
+    Layout = "_Layout";
+    var inventoryMessage = TempData["InventoryMessage"] as string;
+}
+
+<style>
+    .inventory-page { max-width: 1440px; margin: 0 auto; min-width: 0; }
+    .inventory-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 2px 5px rgba(15, 23, 42, .04); }
+    .inventory-number { font-size: 2.25rem; font-weight: 700; line-height: 1.2; }
+    .inventory-note { background: #eef2ff; border-left: 4px solid #6366f1; border-radius: 12px; padding: 18px 20px; }
+    .inventory-page .form-label { font-weight: 600; }
+    .inventory-page .form-text { color: #64748b; }
+    .inventory-page .inventory-ledger { min-width: 880px; font-size: .875rem; }
+    .inventory-page .inventory-ledger td { vertical-align: top; overflow-wrap: anywhere; }
+    .inventory-page .inventory-ledger th { white-space: nowrap; }
+    .inventory-page .inventory-reason { min-width: 160px; white-space: pre-line; }
+    @@media (max-width: 575px) {
+        .inventory-panel { padding: 18px; }
+    }
+</style>
+<link rel="stylesheet" href="~/css/dashboard-sidebar.css" asp-append-version="true" />
+@if (Model.Snapshot.IsReady)
+{
+    <link rel="stylesheet" href="~/css/inventory-report-print.css" asp-append-version="true" />
+}
+<partial name="_DashboardSidebar" model="new DashboardSidebarVM { IsOwner = Model.IsOwner, IsInventory = true }" />
+
+<div class="inventory-shell @(Model.IsOwner ? "inventory-shell--owner" : "inventory-shell--staff")">
+<div class="inventory-page">
+    <header class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="fw-bold mb-2">Supplies Inventory</h1>
+            <p class="text-muted mb-0">Monitor the shop's detergent and fabric conditioner by piece.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(inventoryMessage))
+    {
+        <div class="alert alert-info" role="status">@inventoryMessage</div>
+    }
+
+    <div class="inventory-note mb-4">
+        <h2 class="h6 fw-bold mb-2">Count the supplies actually used</h2>
+        <p class="small mb-2">One piece means one sachet or individual item. Walk-in orders deduct the shop pieces confirmed by staff when saved. For online orders, staff confirms the saved piece quantities through Accept &amp; Start or Update Status when actually issuing the supplies. Each order is deducted only once and recorded below.</p>
+        <p class="small mb-0">Customer-provided supplies have no shop-supply charge or stock deduction. Laundry weight does not determine the piece count automatically. Booking online or recording a payment alone does not deduct stock.</p>
+    </div>
+
+    @if (!Model.Snapshot.IsReady)
+    {
+        <section class="inventory-panel" aria-labelledby="inventory-setup-heading">
+            <h2 id="inventory-setup-heading" class="h5 fw-bold">Inventory setup required</h2>
+            <p class="text-muted">Inventory records are not ready yet. No stock balances or usage are assumed.</p>
+            @if (Model.IsOwner)
+            {
+                <p class="small">Initialize the inventory, then record the actual opening stock. This does not create sample stock or deduct supplies from past bookings.</p>
+                <form asp-controller="Inventory" asp-action="Setup" method="post" asp-antiforgery="true">
+                    <input type="hidden" name="requestToken" value="@Model.RequestToken" />
+                    <button type="submit" class="btn btn-primary-ezk">Initialize Inventory</button>
+                </form>
+            }
+            else
+            {
+                <p class="mb-0">Please ask the owner to initialize the inventory and enter the opening stock.</p>
+            }
+        </section>
+    }
+    else
+    {
+        @if (Model.Snapshot.NeedsRestock.Count > 0)
+        {
+            <div class="alert alert-danger d-flex gap-2 align-items-start" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <div>
+                    <b>@Model.Snapshot.NeedsRestock.Count product(s) need restocking</b> (@EZKLaundrySystem.Models.InventorySnapshot.LowStockLevel pieces or fewer):
+                    @string.Join(" · ", Model.Snapshot.NeedsRestock.Select(item => $"{item.Name} ({item.Quantity})"))
+                </div>
+            </div>
+        }
+        <section class="row g-3 mb-4" aria-label="Available supplies">
+            @foreach (var item in Model.Snapshot.Items)
+            {
+                bool outOfStock = item.Quantity == 0;
+                <div class="col-xl-3 col-md-4 col-sm-6">
+                    <div class="inventory-panel h-100" style="@(outOfStock || item.IsLow ? "border-color:#fca5a5; background:#fef2f2" : "")">
+                        <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                            <h2 class="h6 fw-bold mb-0">@item.Name</h2>
+                            <span class="badge @(outOfStock || item.IsLow ? "bg-danger" : "bg-success")">@(outOfStock ? "Out of stock" : item.IsLow ? "Low" : "In stock")</span>
+                        </div>
+                        <div class="small text-muted mb-1">@item.ProductType</div>
+                        <div><span class="inventory-number" style="@(outOfStock || item.IsLow ? "color:#dc2626" : "")">@item.Quantity.ToString("N0")</span> <span class="text-muted">pieces</span></div>
+                        <p class="small text-muted mt-1 mb-0">&#8369;@item.UnitPrice.ToString("N2") per piece</p>
+                    </div>
+                </div>
+            }
+        </section>
+
+        @if (Model.Snapshot.Items.Count == 0)
+        {
+            <div class="alert alert-warning" role="alert">No products are available. Ask the owner to add the detergent and fabric conditioner products under Service Pricing.</div>
+        }
+        else if (Model.IsOwner)
+        {
+            <section class="inventory-panel mb-4" aria-labelledby="stock-in-heading">
+                <h2 id="stock-in-heading" class="h5 fw-bold">Add Stock</h2>
+                <p class="small text-muted">Record new supplies received by the shop.</p>
+                <form asp-controller="Inventory" asp-action="StockIn" method="post" asp-antiforgery="true">
+                    <input type="hidden" name="requestToken" value="@Model.RequestToken" />
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="stock-in-item" class="form-label">Supply</label>
+                            <select id="stock-in-item" name="serviceId" class="form-select" required>
+                                <option value="">Choose a supply</option>
+                                @foreach (var item in Model.Snapshot.Items)
+                                {
+                                    <option value="@item.ServiceId">@item.Name (@item.Quantity left)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="stock-in-quantity" class="form-label">Pieces received</label>
+                            <input id="stock-in-quantity" name="quantity" type="number" min="1" max="1000000" step="1" class="form-control" required />
+                        </div>
+                        <div class="col-md-5">
+                            <label for="stock-in-reason" class="form-label">Reason / reference</label>
+                            <input id="stock-in-reason" name="reason" type="text" minlength="3" maxlength="255" class="form-control" placeholder="e.g. Opening stock or supplier delivery" required />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary-ezk">Record Stock In</button>
+                </form>
+            </section>
+        }
+
+        <section class="inventory-panel" aria-labelledby="inventory-ledger-heading">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <h2 id="inventory-ledger-heading" class="h5 fw-bold mb-1">Stock Movement History</h2>
+                    <p class="small text-muted mb-0">Latest 100 movements. Positive quantities add stock; negative quantities reduce stock.</p>
+                </div>
+                <button id="printInventoryReportButton" type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inventoryReportDateModal">
+                    <i class="bi bi-printer me-1" aria-hidden="true"></i> Print Inventory Report
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 inventory-ledger">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Date / Time</th>
+                            <th scope="col">Supply</th>
+                            <th scope="col" class="text-end">Pieces</th>
+                            <th scope="col" class="text-end">Balance After</th>
+                            <th scope="col">Movement</th>
+                            <th scope="col">Booking</th>
+                            <th scope="col">Recorded By</th>
+                            <th scope="col">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Snapshot.Movements.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-muted py-4">No stock movements recorded yet.</td></tr>
+                        }
+                        @foreach (var movement in Model.Snapshot.Movements)
+                        {
+                            <tr>
+                                <td>@movement.CreatedAt.ToString("MMM dd, yyyy h:mm tt")</td>
+                                <td>@(movement.Name == "Powder" ? "Powder Soap" : movement.Name == "Downy" ? "Downy Softener" : movement.Name)</td>
+                                <td class="text-end fw-bold @(movement.Change < 0 ? "text-danger" : "text-success")">@(movement.Change > 0 ? "+" : "")@movement.Change.ToString("N0")</td>
+                                <td class="text-end">@movement.BalanceAfter.ToString("N0")</td>
+                                <td>@movement.Kind</td>
+                                <td>@(string.IsNullOrWhiteSpace(movement.BookingReference) ? "-" : movement.BookingReference)</td>
+                                <td>@movement.RecordedBy</td>
+                                <td class="inventory-reason">@movement.Reason</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>
+@if (Model.Snapshot.IsReady)
+{
+    <partial name="/Views/Inventory/_InventoryReportPrint.cshtml" model="Model" />
+}
+</div>
+
+@if (Model.Snapshot.IsReady)
+{
+    var today = DateTime.Today;
+    <div class="modal" id="inventoryReportDateModal" tabindex="-1" aria-labelledby="inventoryReportDateTitle" aria-describedby="inventoryReportDateHelp" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="inventoryReportDateForm" asp-controller="Inventory" asp-action="Report" method="get">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5 fw-bold" id="inventoryReportDateTitle">Print Inventory Report</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="inventoryReportDateHelp" class="text-muted small">Choose the period to print. All stock movements on both dates are included, even those older than the latest 100 shown on screen.</p>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label for="inventoryReportFromDate" class="form-label fw-bold">From Date</label>
+                                <input id="inventoryReportFromDate" name="fromDate" type="date" class="form-control" min="1000-01-01" max="9999-12-31" value="@today.AddDays(1 - today.Day).ToString("yyyy-MM-dd")" required />
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="inventoryReportToDate" class="form-label fw-bold">To Date</label>
+                                <input id="inventoryReportToDate" name="toDate" type="date" class="form-control" min="1000-01-01" max="9999-12-31" value="@today.ToString("yyyy-MM-dd")" required />
+                            </div>
+                        </div>
+                        <div id="inventoryReportDateError" class="alert alert-danger small mt-3 mb-0" role="alert" hidden></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button id="inventoryReportDateSubmit" type="submit" class="btn btn-primary-ezk">Print Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Snapshot.IsReady)
+    {
+        <script src="~/js/inventory-report-print.js" asp-append-version="true"></script>
+    }
+}

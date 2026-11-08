@@ -1,0 +1,107 @@
+@model EZKLaundrySystem.Controllers.BookingReceiptVM
+@{ Layout = "_Layout"; }
+<style>
+    body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    .receipt-card { max-width: 650px; margin: 50px auto; background: white; border-radius: 15px; border: 1px solid #e2e8f0; overflow: hidden; }
+    .btn-dashboard { background-color: #2b3fd4; color: white !important; font-weight: 600; border-radius: 8px; padding: 12px; flex: 1; text-align: center; text-decoration: none; }
+    .btn-print { background-color: white; color: #1e293b !important; border: 1px solid #e2e8f0; font-weight: 600; border-radius: 8px; padding: 12px; flex: 1; }
+</style>
+
+<div class="container">
+    <div class="text-center mt-5">
+        <div class="bg-primary bg-opacity-10 text-primary d-inline-flex p-3 rounded-circle mb-3"><i class="bi bi-check-lg fs-2"></i></div>
+        <h2 class="fw-bold">Booking Confirmed!</h2>
+        <p class="text-muted">Your booking is now pending Staff acceptance.</p>
+    </div>
+
+    <div class="receipt-card shadow-sm">
+        <div class="p-4 border-bottom bg-light bg-opacity-50 d-flex justify-content-between">
+            <div><small class="text-muted fw-bold">REFERENCE ID</small><h4 class="text-primary fw-bold mb-0">@Model.BookingCode</h4></div>
+            <span class="badge bg-light text-dark border align-self-center px-3">@Model.Status</span>
+        </div>
+        <div class="p-4">
+            <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
+                <span class="text-muted fw-bold">SERVICE METHOD</span>
+                <span class="fw-bold">@(Model.ServiceMode == "Self Service" ? "Self-Service (DIY)" : "Full-Service")</span>
+            </div>
+            <h6 class="fw-bold mb-3 small text-muted">SERVICE SUMMARY</h6>
+            @foreach (var service in Model.Services)
+            {
+                <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                    <div>
+                        <p class="fw-bold mb-0">@service.ServiceName</p>
+                        <small class="text-muted">
+                            @if (service.ChargingBasis == "PerKg")
+                            {
+                                <span>@service.Quantity.ToString("0.##") kg × ₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                            else if (service.ChargingBasis == "PerLoad")
+                            {
+                                <span>@service.Quantity.ToString("0.##") @(service.Quantity == 1 ? "load" : "loads") × ₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                            else if (service.ChargingBasis == "PerItem")
+                            {
+                                <span>@service.Quantity.ToString("0.##") @(service.Quantity == 1 ? "piece" : "pieces") × ₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                            else
+                            {
+                                <span>₱@service.UnitPrice.ToString("N2")</span>
+                            }
+                        </small>
+                    </div>
+                    <span class="fw-bold">₱@service.LineTotal.ToString("N2")</span>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.SupplyInstructions))
+            {
+                <div class="p-3 bg-light rounded-3 mt-3">
+                    <h6 class="fw-bold mb-2">Detergent &amp; fabric softener</h6>
+                    <p class="small mb-0" style="white-space: pre-line;">@Model.SupplyInstructions</p>
+                </div>
+            }
+            @if (Model.ScheduledAt is DateTime scheduledAt)
+            {
+                <div class="alert alert-primary border-0 small mt-3 mb-0">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    Drop-off schedule: <strong>@scheduledAt.ToString("dddd, MMM dd, h:mm tt")</strong>.
+                    Please arrive within @EZKLaundrySystem.Data.BookingSchedule.GraceMinutes minutes (until @scheduledAt.AddMinutes(EZKLaundrySystem.Data.BookingSchedule.GraceMinutes).ToString("h:mm tt")), or the booking will be cancelled automatically.
+                </div>
+            }
+            <div class="row mb-4">
+                <div class="col-6 mt-3"><p class="small text-muted mb-0">Weight (Est.)</p><p class="fw-bold">@Model.Weight.ToString("0.##") kg</p></div>
+                <div class="col-6 mt-3"><p class="small text-muted mb-0">Payment Method</p><p class="fw-bold">@(Model.PaymentMethod == "Cash" ? "Cash on Pickup" : Model.PaymentMethod)</p></div>
+            </div>
+            <div class="alert alert-danger py-2 small border-0" style="background:#fff1f2; color:#9f1239;">
+                <i class="bi bi-exclamation-circle me-2"></i> Final price subject to change based on actual weight.
+            </div>
+            @if (Model.RewardDiscount > 0m)
+            {
+                <div class="d-flex justify-content-between mt-3">
+                    <span>Subtotal</span><span>&#8369;@Model.Subtotal.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mt-2 text-success">
+                    <span>Rewards discount</span><span>-&#8369;@Model.RewardDiscount.ToString("N2")</span>
+                </div>
+                <p class="small text-muted mt-2 mb-0">100 points redeemed for this order.</p>
+            }
+            <div class="d-flex justify-content-between mt-3 text-primary"><h5 class="fw-bold">Estimated Total</h5><h4 class="fw-bold">₱@Model.EstimatedTotal.ToString("N2")</h4></div>
+            @if (Model.GCashAmount > 0m)
+            {
+                <div class="d-flex justify-content-between mt-2">
+                    <span>GCash payment declared (awaiting verification)</span><strong>₱@Model.GCashAmount.ToString("N2")</strong>
+                </div>
+            }
+        </div>
+        <div class="p-3 bg-light border-top text-center">
+            <small class="text-muted">
+                Booked @Model.BookedAt.ToString("MMM dd, yyyy h:mm tt") ·
+                @(Model.EstimatedTotal <= 0m ? "No payment due at this estimated total" : Model.PaymentMethod == "GCash" ? "GCash payment awaiting Staff verification" : "Payment due on pickup")
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex gap-3 mb-5" style="max-width: 650px; margin: 20px auto;">
+        <a href="/Customer/Index" class="btn-dashboard">Go to Dashboard</a>
+        <button onclick="window.print()" class="btn-print">Print Receipt</button>
+    </div>
+</div>

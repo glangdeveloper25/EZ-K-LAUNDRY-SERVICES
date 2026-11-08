@@ -1,0 +1,198 @@
+/* A dedicated print document; the dashboard table stays unchanged. */
+#customerRecordsDocument {
+    display: none;
+}
+
+@media print {
+    body.print-customer-records .section-content,
+    body.print-customer-records #records > :not(#customerRecordsDocument),
+    body.print-customer-records .modal,
+    body.print-customer-records .modal-backdrop {
+        display: none !important;
+    }
+
+    body.print-customer-records .section-content#records,
+    body.print-customer-records #customerRecordsDocument {
+        display: block !important;
+    }
+
+    #customerRecordsDocument {
+        color: #17212b;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10pt;
+        line-height: 1.45;
+    }
+
+    .customer-document-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6mm;
+        padding: 3mm 0 6mm;
+        border-bottom: 2pt solid #17212b;
+        break-inside: avoid;
+        break-after: avoid;
+    }
+
+    .customer-document-brand {
+        flex-shrink: 0;
+    }
+
+    .customer-document-brand img {
+        display: block;
+        width: 38mm;
+        height: auto;
+        margin-bottom: 2mm;
+    }
+
+    .customer-document-brand p {
+        margin: 0;
+        font-size: 12pt;
+        font-weight: 700;
+    }
+
+    .customer-document-title {
+        max-width: 115mm;
+        text-align: right;
+    }
+
+    .customer-document-title h1 {
+        margin: 1mm 0 2mm;
+        font-size: 22pt;
+        font-weight: 700;
+        letter-spacing: -0.6pt;
+    }
+
+    .customer-document-title p {
+        margin: 0;
+        color: #52606c;
+    }
+
+    .customer-document-title .customer-document-eyebrow {
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 1.5pt;
+        text-transform: uppercase;
+    }
+
+    .customer-document-metadata {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 4mm 8mm;
+        margin: 0 0 7mm;
+        padding: 4mm 0;
+        border-bottom: 0.6pt solid #aeb7bf;
+        break-inside: avoid;
+        break-after: avoid;
+    }
+
+    .customer-document-metadata dt {
+        margin-bottom: 1mm;
+        color: #52606c;
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 0.6pt;
+        text-transform: uppercase;
+    }
+
+    .customer-document-metadata dd {
+        margin: 0;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .customer-document-generated {
+        text-align: right;
+    }
+
+    .customer-document-prepared {
+        grid-column: 1 / -1;
+    }
+
+    .customer-document-section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 5mm;
+        margin-bottom: 3mm;
+        break-after: avoid;
+    }
+
+    .customer-document-section-heading h2 {
+        margin: 0;
+        font-size: 12pt;
+        font-weight: 700;
+    }
+
+    .customer-document-section-heading p {
+        margin: 0;
+        color: #52606c;
+        font-size: 8pt;
+    }
+
+    .customer-document-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        font-size: 10pt;
+        line-height: 1.5;
+    }
+
+    .customer-document-table thead {
+        display: table-header-group;
+    }
+
+    .customer-document-table tr {
+        break-inside: avoid;
+    }
+
+    .customer-document-table th,
+    .customer-document-table td {
+        padding: 3mm 1.5mm;
+        text-align: left;
+        vertical-align: top;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .customer-document-table th {
+        border-top: 1pt solid #17212b;
+        border-bottom: 1pt solid #17212b;
+        background: #f1f3f5;
+        font-size: 8.5pt;
+        font-weight: 700;
+    }
+
+    .customer-document-table td {
+        border-bottom: 0.5pt solid #c9cfd5;
+    }
+
+    .customer-document-table tbody tr:last-child td {
+        border-bottom: 1pt solid #17212b;
+    }
+
+    .customer-document-table .customer-document-empty {
+        padding: 12mm 3mm;
+        text-align: center;
+        color: #52606c;
+    }
+
+    .customer-document-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 8mm;
+        margin-top: 4mm;
+        color: #52606c;
+        font-size: 8pt;
+        break-inside: avoid;
+    }
+
+    .customer-document-footer p {
+        margin: 0;
+    }
+
+    .customer-document-end {
+        white-space: nowrap;
+        font-style: italic;
+    }
+}

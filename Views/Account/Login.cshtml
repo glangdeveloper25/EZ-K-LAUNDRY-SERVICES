@@ -1,0 +1,51 @@
+@{
+    Layout = "_Layout";
+}
+<div style="background-color: #f8fafc; min-height: 90vh; display: flex; align-items: center;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 p-4 text-center" style="border-top: 4px solid #6366f1 !important;">
+                    <h4 class="fw-bold">Welcome Back!</h4>
+                    <p class="text-muted small">Enter your details to log in.</p>
+
+                    <!-- OUTPUT MESSAGE PARA SA REGISTRATION SUCCESS -->
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert alert-success small py-2">@TempData["Message"]</div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger small py-2">@TempData["Error"]</div>
+                    }
+
+                    <div class="btn-group w-100 mb-4 bg-light p-1" style="border-radius: 8px;">
+                        <button class="btn btn-white shadow-sm fw-bold">Log in</button>
+                        <a href="/Account/Register" class="btn text-muted">Sign Up</a>
+                    </div>
+
+                    <form asp-action="Login" method="post" class="text-start">
+                        <div class="mb-3">
+                            <label class="small fw-bold">Email or Username</label>
+                            <input type="email" name="email" class="form-control bg-light" placeholder="juan.delacruz@email.com" required />
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <label class="small fw-bold">Password</label>
+                                <a href="#" class="small text-decoration-none">Forgot password?</a>
+                            </div>
+                            <input type="password" name="password" class="form-control bg-light" placeholder="********" required />
+                        </div>
+                        <button type="submit" class="btn w-100 fw-bold text-white py-2" style="background-color: #6366f1;">Log in</button>
+                    </form>
+
+                </div>
+                <div class="text-center mt-3">
+                    <a href="/Owner/RegisterShop" class="text-muted small mx-2">Register Shop</a>
+                    <a href="/Account/StaffLogin" class="text-muted small mx-2">Staff Login</a>
+                    <a href="#" class="text-muted small mx-2">Help</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

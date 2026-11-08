@@ -1,0 +1,9 @@
+bin/
+obj/
+tmp/
+docs/
+.vscode/
+.git/
+*.sql
+appsettings.Development.json
+db.ps1

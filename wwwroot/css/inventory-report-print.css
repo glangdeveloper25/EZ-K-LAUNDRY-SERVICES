@@ -1,0 +1,222 @@
+/* This stylesheet is loaded only on the ready inventory page. */
+#inventoryReportDocument {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body > :not(main),
+    main > :not(.inventory-shell),
+    .inventory-shell > :not(#inventoryReportDocument) {
+        display: none !important;
+    }
+
+    .inventory-shell {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        max-width: none !important;
+    }
+
+    #inventoryReportDocument {
+        display: block !important;
+        color: #17212b;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10pt;
+        line-height: 1.45;
+    }
+
+    .inventory-document-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6mm;
+        padding: 3mm 0 6mm;
+        border-bottom: 2pt solid #17212b;
+        break-inside: avoid;
+        break-after: avoid;
+    }
+
+    .inventory-document-brand img {
+        display: block;
+        width: 38mm;
+        height: auto;
+        margin-bottom: 2mm;
+    }
+
+    .inventory-document-brand p {
+        margin: 0;
+        font-size: 12pt;
+        font-weight: 700;
+    }
+
+    .inventory-document-title {
+        text-align: right;
+    }
+
+    .inventory-document-title h1 {
+        margin: 1mm 0 2mm;
+        font-size: 22pt;
+        font-weight: 700;
+        letter-spacing: -.6pt;
+    }
+
+    .inventory-document-title p {
+        margin: 0;
+        color: #52606c;
+    }
+
+    .inventory-document-title .inventory-document-eyebrow {
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 1.5pt;
+        text-transform: uppercase;
+    }
+
+    .inventory-document-metadata {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8mm;
+        margin: 0 0 7mm;
+        padding: 4mm 0;
+        border-bottom: .6pt solid #aeb7bf;
+        break-inside: avoid;
+        break-after: avoid;
+    }
+
+    .inventory-document-metadata dt {
+        margin-bottom: 1mm;
+        color: #52606c;
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: .6pt;
+        text-transform: uppercase;
+    }
+
+    .inventory-document-metadata dd {
+        margin: 0;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .inventory-document-generated {
+        text-align: right;
+    }
+
+    .inventory-document-section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 5mm;
+        margin-bottom: 2mm;
+        break-after: avoid;
+    }
+
+    .inventory-document-section-heading h2 {
+        margin: 0;
+        font-size: 12pt;
+        font-weight: 700;
+    }
+
+    .inventory-document-section-heading p,
+    .inventory-document-note {
+        margin: 0;
+        font-size: 8pt;
+        color: #52606c;
+    }
+
+    .inventory-document-note {
+        margin-bottom: 3mm;
+        break-after: avoid;
+    }
+
+    .inventory-document-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        font-size: 10pt;
+        line-height: 1.5;
+    }
+
+    .inventory-document-table thead {
+        display: table-header-group;
+    }
+
+    .inventory-document-table tr {
+        break-inside: avoid;
+    }
+
+    .inventory-document-table th,
+    .inventory-document-table td {
+        padding: 3mm 1.5mm;
+        text-align: left;
+        vertical-align: top;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .inventory-document-table th {
+        border-top: 1pt solid #17212b;
+        border-bottom: 1pt solid #17212b;
+        background: #f1f3f5;
+        font-size: 8.5pt;
+        font-weight: 700;
+    }
+
+    .inventory-document-table td {
+        border-bottom: .5pt solid #c9cfd5;
+    }
+
+    .inventory-document-table tbody tr:last-child td {
+        border-bottom: 1pt solid #17212b;
+    }
+
+    .inventory-document-table .inventory-document-quantity {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .inventory-document-change {
+        font-weight: 700;
+    }
+
+    .inventory-document-table .inventory-document-empty {
+        padding: 12mm 3mm;
+        text-align: center;
+        color: #52606c;
+    }
+
+    .inventory-document-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 8mm;
+        margin-top: 4mm;
+        color: #52606c;
+        font-size: 8pt;
+        break-inside: avoid;
+    }
+
+    .inventory-document-footer p {
+        margin: 0;
+    }
+
+    .inventory-document-end {
+        white-space: nowrap;
+        font-style: italic;
+    }
+}

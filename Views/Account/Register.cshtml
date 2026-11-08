@@ -1,0 +1,93 @@
+@model EZKLaundrySystem.Models.CustomerRegistration
+@{ Layout = "_Layout"; }
+<style>
+    .password-field {
+        position: relative;
+    }
+
+    .password-field .form-control {
+        padding-right: 48px;
+        border-radius: 0.375rem !important;
+    }
+
+    .password-visibility-button {
+        position: absolute;
+        top: 50%;
+        right: 14px;
+        transform: translateY(-50%);
+        z-index: 5;
+        border: 0;
+        padding: 2px;
+        background: transparent;
+        color: #64748b;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .password-visibility-button:hover,
+    .password-visibility-button:focus {
+        color: #2563eb;
+        outline: none;
+    }
+</style>
+<div class="container text-center py-5">
+    <h1 class="fw-bold">Welcome !</h1>
+    <p class="text-muted fs-5 mb-5">Create your Customer Account</p>
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5 text-start">
+            <form asp-action="Register" method="post" class="bg-white p-4 rounded-4 shadow-sm">
+                <div class="mb-3"><label class="form-label fw-bold small">First Name</label>
+                    <input asp-for="FirstName" class="form-control" placeholder="Juan" autocomplete="given-name" />
+                    <span asp-validation-for="FirstName" class="text-danger small"></span>
+                </div>
+                <div class="mb-3"><label class="form-label fw-bold small">Last Name</label>
+                    <input asp-for="LastName" class="form-control" placeholder="Dela Cruz" autocomplete="family-name" />
+                    <span asp-validation-for="LastName" class="text-danger small"></span>
+                </div>
+                <div class="mb-3"><label class="form-label fw-bold small">Email Address</label>
+                    <input asp-for="Email" class="form-control" placeholder="email@example.com" autocomplete="email" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="mb-3"><label class="form-label fw-bold small">Contact Number</label>
+                    <input asp-for="ContactNumber" class="form-control" placeholder="09XXXXXXXXX" autocomplete="tel" inputmode="numeric" />
+                    <span asp-validation-for="ContactNumber" class="text-danger small"></span>
+                </div>
+                <div class="mb-3"><label class="form-label fw-bold small">Password</label>
+                    <div class="password-field">
+                        <input asp-for="Password" type="password" class="form-control" placeholder="Create a strong password" autocomplete="new-password" minlength="8" maxlength="128" />
+                        <button type="button" class="password-visibility-button" onclick="togglePasswordVisibility('Password', this)" aria-label="Show password" aria-pressed="false" title="Show password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">Use 8+ characters with uppercase, lowercase, number, and special character.</div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="mb-4"><label class="form-label fw-bold small">Confirm Password</label>
+                    <div class="password-field">
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+                        <button type="button" class="password-visibility-button" onclick="togglePasswordVisibility('ConfirmPassword', this)" aria-label="Show confirm password" aria-pressed="false" title="Show password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+                <button type="submit" class="btn btn-primary-ezk w-100 py-3">Register</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePasswordVisibility(fieldId, button) {
+        const passwordField = document.getElementById(fieldId);
+        const passwordIsVisible = passwordField.type === 'text';
+        passwordField.type = passwordIsVisible ? 'password' : 'text';
+
+        const icon = button.querySelector('i');
+        icon.classList.toggle('bi-eye', passwordIsVisible);
+        icon.classList.toggle('bi-eye-slash', !passwordIsVisible);
+        button.setAttribute('aria-pressed', String(!passwordIsVisible));
+        button.setAttribute('aria-label', passwordIsVisible ? 'Show password' : 'Hide password');
+        button.title = passwordIsVisible ? 'Show password' : 'Hide password';
+    }
+</script>

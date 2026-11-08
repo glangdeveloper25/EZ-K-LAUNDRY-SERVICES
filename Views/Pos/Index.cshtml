@@ -1,0 +1,514 @@
+@model EZKLaundrySystem.Models.PosPageVM
+@using System.Globalization
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Walk-in (POS)";
+    var posError = TempData["PosError"] as string;
+    string Money(decimal value) => value.ToString("0.00", CultureInfo.InvariantCulture);
+    string ServiceLabel(string name) => name switch { "Washing" => "Wash", "Drying" => "Dry", "Folding" => "Fold", _ => name };
+    string ServiceIcon(string name) => name switch { "Washing" => "bi-droplet-half", "Drying" => "bi-wind", _ => "bi-layers" };
+    string ProductLabel(string name) => name switch { "Powder" => "Powder Soap", "Downy" => "Downy Softener", _ => name };
+}
+
+<link rel="stylesheet" href="~/css/dashboard-sidebar.css" asp-append-version="true" />
+<style>
+    .pos-page { max-width: 1440px; margin: 0 auto; color: #10203b; }
+    .pos-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+    .pos-lbl { font-size: .72rem; font-weight: 800; color: #64748b; letter-spacing: .05em; margin-bottom: 8px; }
+    .pos-tile { position: relative; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px 8px; text-align: center; background: #fff; font-weight: 700; cursor: pointer; height: 100%; user-select: none; }
+    .pos-tile i { display: block; font-size: 1.4rem; color: #4f46e5; margin-bottom: 4px; }
+    .pos-tile small { display: block; color: #64748b; font-weight: 500; }
+    .pos-tile.on { border-color: #6366f1; background: #eef2ff; }
+    .pos-qty { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .pos-qty button { width: 26px; height: 26px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-weight: 800; line-height: 1; padding: 0; }
+    .pos-seg { display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; }
+    .pos-seg button { flex: 1; border: 0; background: transparent; padding: 7px; border-radius: 8px; font-weight: 700; color: #64748b; }
+    .pos-seg button.on { background: #fff; color: #10203b; box-shadow: 0 2px 6px rgba(15,23,42,.08); }
+    .pos-seg button:disabled { opacity: .4; }
+    .pos-kg { font-size: 1.4rem; font-weight: 800; text-align: center; }
+    .pos-prod { position: relative; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #fff; height: 100%; cursor: pointer; user-select: none; }
+    .pos-prod.on { border-color: #6366f1; background: #eef2ff; }
+    .pos-prod.low { border-color: #fca5a5; background: #fef2f2; }
+    .pos-prod.on.low { border-color: #6366f1; }
+    .pos-prod.out { opacity: .45; cursor: not-allowed; }
+    .pos-prod .nm { font-weight: 700; line-height: 1.2; }
+    .pos-prod .meta { font-size: .76rem; color: #64748b; }
+    .pos-own { border-style: dashed; color: #475569; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; text-align: center; }
+    .pos-own.on { border-style: solid; border-color: #64748b; background: #f1f5f9; }
+    .low-text { color: #dc2626 !important; font-weight: 800; }
+    .pos-search-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 16px 34px rgba(15,23,42,.16); padding: 6px; }
+    .pos-cust { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+    .pos-cust:hover, .pos-cust.selected { background: #eef2ff; }
+    .pos-av { width: 34px; height: 34px; border-radius: 50%; background: #6366f1; color: #fff; display: grid; place-items: center; font-weight: 800; flex: 0 0 34px; }
+    .pos-suki { font-size: .68rem; font-weight: 800; background: #fbbf24; color: #10203b; padding: 1px 7px; border-radius: 999px; margin-left: 4px; }
+    .pos-cnt { font-size: .68rem; font-weight: 700; background: #f1f5f9; color: #475569; padding: 1px 7px; border-radius: 999px; margin-left: 4px; }
+    .pos-new { border: 2px solid #6366f1; background: #f8faff; border-radius: 12px; padding: 12px 14px; }
+    .pos-dup { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 6px 10px; font-size: .8rem; }
+    .pos-receipt { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; position: sticky; top: 18px; }
+    .pos-line { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; }
+    .pos-line small { color: #64748b; display: block; font-size: .76rem; }
+    .pos-total { display: flex; justify-content: space-between; align-items: center; border-top: 2px dashed #cbd5e1; margin-top: 8px; padding-top: 10px; }
+    .pos-total b { font-size: 1.7rem; color: #2563eb; }
+    .pos-change { background: #ecfdf5; color: #047857; border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; font-weight: 800; font-size: 1.1rem; }
+    .pos-change.short { background: #fef2f2; color: #b91c1c; }
+    .pos-gcash { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 10px 12px; }
+</style>
+
+<partial name="_DashboardSidebar" model="new DashboardSidebarVM { IsOwner = false, IsPos = true }" />
+
+<div class="inventory-shell inventory-shell--staff">
+<div class="pos-page">
+    <header class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Walk-in (POS)</h1>
+            <p class="text-muted mb-0">Search the customer, tap the services and products, then record the payment.</p>
+        </div>
+        <a asp-controller="Staff" asp-action="Index" asp-fragment="queue-section" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-task me-1"></i>Active Queue</a>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(posError))
+    {
+        <div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-triangle-fill me-1"></i>@posError</div>
+    }
+
+    <form asp-action="Checkout" method="post" id="posForm" novalidate>
+        <input type="hidden" name="RequestToken" value="@Model.RequestToken" />
+        <div id="posHidden"></div>
+
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <!-- 1. CUSTOMER -->
+                <div class="pos-panel" style="position:relative; z-index:5">
+                    <div class="pos-lbl">1 · CUSTOMER <span class="text-muted fw-normal" style="letter-spacing:0">— search a suki by name or contact number, or add a new customer</span></div>
+
+                    <div id="customerSearchBox">
+                        <div class="d-flex gap-2">
+                            <div class="position-relative flex-grow-1">
+                                <i class="bi bi-search" style="position:absolute; left:12px; top:9px; color:#64748b"></i>
+                                <input id="customerSearch" class="form-control" style="padding-left:36px" placeholder="Type a name or contact number..." autocomplete="off" aria-label="Search customer">
+                                <div id="customerResults" class="pos-search-list" hidden></div>
+                            </div>
+                            <button type="button" class="btn btn-primary fw-bold px-3" id="newCustomerButton" style="white-space:nowrap"><i class="bi bi-person-plus-fill me-1"></i>New Customer</button>
+                        </div>
+                    </div>
+
+                    <div id="customerSelected" class="pos-cust selected" style="border:1px solid #c7d2fe; cursor:default" hidden>
+                        <span class="pos-av" id="selectedInitial">?</span>
+                        <div class="flex-grow-1"><b id="selectedName"></b> <span id="selectedBadge"></span><div class="text-muted small" id="selectedPhone"></div></div>
+                        <button type="button" class="btn btn-link fw-bold text-decoration-none" id="changeCustomer">Change</button>
+                    </div>
+
+                    <div id="customerNew" class="pos-new" hidden>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <b class="text-primary"><i class="bi bi-person-plus-fill me-1"></i>New customer</b>
+                            <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted" id="backToSearch">Back to search</button>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-4"><label class="small fw-semibold mb-1" for="newFirstName">First name *</label><input id="newFirstName" class="form-control" maxlength="100"></div>
+                            <div class="col-md-4"><label class="small fw-semibold mb-1" for="newLastName">Last name *</label><input id="newLastName" class="form-control" maxlength="100"></div>
+                            <div class="col-md-4"><label class="small fw-semibold mb-1" for="newPhone">Contact number *</label><input id="newPhone" class="form-control" maxlength="20" inputmode="tel"></div>
+                        </div>
+                        <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Saved for the next visit. No email or password needed.</div>
+                        <div class="pos-dup mt-2" id="duplicateNotice" hidden></div>
+                    </div>
+                </div>
+
+                <!-- 2. SERVICES -->
+                <div class="pos-panel">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <div class="pos-lbl">2 · SERVICES (per load)</div>
+                            <div class="small text-muted mb-2" id="serviceHint">Full-Service is the wash-dry-fold package: tap to add, then set the loads.</div>
+                            <div class="row g-2">
+                                @foreach (var service in Model.Services)
+                                {
+                                    <div class="col-4" data-tile-wrap="@service.Name">
+                                        <div class="pos-tile" data-service="@service.Name" role="button" tabindex="0">
+                                            <i class="bi @ServiceIcon(service.Name)"></i>@ServiceLabel(service.Name)
+                                            <small>&#8369;@service.Price.ToString("N2") / load</small>
+                                            <div class="pos-qty" hidden><button type="button" data-step="-1" aria-label="Less">−</button><span class="fw-bold" data-count>0</span><button type="button" data-step="1" aria-label="More">+</button></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="pos-lbl">METHOD</div>
+                            <div class="pos-seg mb-3" id="modeSeg">
+                                <button type="button" class="on" data-mode="Full-Service">Full-Service</button>
+                                <button type="button" data-mode="Self Service">Self-Service</button>
+                            </div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-7"><label class="pos-lbl mb-1" for="weightInput">WEIGHT (kg)</label><input id="weightInput" type="number" class="form-control pos-kg" min="0.01" max="1000" step="0.01" placeholder="0.0"></div>
+                                <div class="col-5"><div class="pos-lbl mb-1">RUSH</div><div class="pos-seg" id="rushSeg"><button type="button" class="on" data-rush="0">No</button><button type="button" data-rush="1">+&#8369;@Model.RushFee.ToString("0.##")</button></div></div>
+                            </div>
+                            <div class="small text-muted mt-1" id="loadHint">1 load = up to @Model.KgPerLoad.ToString("0.##") kg</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3a. FULL-SERVICE SUPPLIES (package) -->
+                <div class="pos-panel" id="packagePanel">
+                    <div class="pos-lbl">3 · DETERGENT &amp; FABRIC CONDITIONER (Full-Service package)</div>
+                    <div class="pos-seg mb-2" id="supplySeg">
+                        <button type="button" class="on" data-shop="0"><i class="bi bi-bag me-1"></i>Customer's own</button>
+                        <button type="button" data-shop="1"><i class="bi bi-shop me-1"></i>Shop's (+&#8369;@Model.PackageFee.ToString("0.##")/load)</button>
+                    </div>
+                    <div class="row g-2" id="packageBrands" hidden>
+                        @foreach (var (type, selectId) in new[] { (EZKLaundrySystem.Data.ProductCatalog.Detergent, "packageDetergent"), (EZKLaundrySystem.Data.ProductCatalog.FabricConditioner, "packageFabcon") })
+                        {
+                            <div class="col-md-6">
+                                <label class="small fw-semibold mb-1" for="@selectId">@type brand (1 per load)</label>
+                                <select id="@selectId" class="form-select">
+                                    <option value="">Choose…</option>
+                                    @foreach (var product in Model.Products.Where(p => p.ProductType == type))
+                                    {
+                                        int stock = product.Stock ?? 0;
+                                        bool usable = Model.InventoryReady && stock > 0;
+                                        <option value="@product.ServiceId" data-extra="@product.PackageExtra.ToString(CultureInfo.InvariantCulture)" data-name="@product.Name" data-stock="@stock" disabled="@(!usable)">
+                                            @product.Name@(product.PackageExtra > 0 ? $" (+₱{product.PackageExtra:0.##}/load)" : "") · @(usable ? (stock <= EZKLaundrySystem.Models.PosPageVM.LowStockLevel ? $"{stock} left · Low" : $"{stock} left") : "Out of stock")
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+                    <div class="small text-muted mt-2">Customer's own: &#8369;155/load package · Shop's: &#8369;165/load (Ariel +&#8369;3/load). Shop supplies are deducted from stock.</div>
+                </div>
+
+                <!-- 3b. SACHETS (Self-Service) -->
+                <div class="pos-panel" id="sachetPanel">
+                    <div class="pos-lbl">3 · BUY SACHETS (Self-Service · tap to add · stock shown)</div>
+                    @if (!Model.InventoryReady && Model.Products.Count > 0)
+                    {
+                        <div class="alert alert-warning small py-2">Inventory is not set up yet, so shop products cannot be sold. Ask the owner to finish the inventory setup.</div>
+                    }
+                    <div class="row g-2">
+                        @foreach (var type in EZKLaundrySystem.Data.ProductCatalog.Types)
+                        {
+                        <div class="col-12"><div class="pos-lbl mt-1 mb-0" style="color:#94a3b8">@type.ToUpperInvariant()</div></div>
+                        @foreach (var product in Model.Products.Where(p => type == EZKLaundrySystem.Data.ProductCatalog.FabricConditioner ? p.ProductType == type : p.ProductType != EZKLaundrySystem.Data.ProductCatalog.FabricConditioner))
+                        {
+                            int stock = product.Stock ?? 0;
+                            bool tracked = product.Stock.HasValue;
+                            bool outOfStock = !Model.InventoryReady || (tracked && stock <= 0);
+                            bool low = tracked && stock > 0 && stock <= EZKLaundrySystem.Models.PosPageVM.LowStockLevel;
+                            <div class="col-md-3 col-6">
+                                <div class="pos-prod @(outOfStock ? "out" : low ? "low" : "")" data-product="@product.ServiceId" data-stock="@(tracked ? stock : 999)" role="button" tabindex="0">
+                                    <div class="nm">@ProductLabel(product.Name)</div>
+                                    <div class="meta">
+                                        &#8369;@product.Price.ToString("N2") ·
+                                        @if (outOfStock)
+                                        {
+                                            <span class="low-text">Out of stock</span>
+                                        }
+                                        else if (low)
+                                        {
+                                            <span class="low-text"><i class="bi bi-exclamation-triangle-fill"></i> @stock left · Low</span>
+                                        }
+                                        else if (tracked)
+                                        {
+                                            <span>@stock left</span>
+                                        }
+                                    </div>
+                                    <div class="pos-qty" hidden><button type="button" data-step="-1" aria-label="Less">−</button><span class="fw-bold" data-count>0</span><button type="button" data-step="1" aria-label="More">+</button></div>
+                                </div>
+                            </div>
+                        }
+                        @if (type == EZKLaundrySystem.Data.ProductCatalog.Detergent)
+                        {
+                            <div class="col-md-3 col-6"><div class="pos-prod pos-own" data-own="detergent" role="button" tabindex="0"><i class="bi bi-bag"></i>Customer's own detergent (no charge)</div></div>
+                        }
+                        else
+                        {
+                            <div class="col-md-3 col-6"><div class="pos-prod pos-own" data-own="softener" role="button" tabindex="0"><i class="bi bi-bag"></i>Customer's own fabric conditioner (no charge)</div></div>
+                        }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDER SUMMARY + PAYMENT -->
+            <div class="col-lg-4">
+                <div class="pos-receipt">
+                    <div class="d-flex justify-content-between align-items-center mb-2"><b style="font-size:1.05rem"><i class="bi bi-receipt me-1"></i>Order Summary</b><span class="badge bg-light text-dark border">Walk-in</span></div>
+                    <div class="small text-muted mb-1" id="summaryWeight"></div>
+                    <div id="summaryLines"><div class="text-muted small py-3 text-center">No items yet. Tap a service to start.</div></div>
+                    <div class="pos-total"><span class="fw-bold">TOTAL</span><b id="summaryTotal">&#8369;0.00</b></div>
+
+                    <div class="pos-lbl mt-3">PAYMENT</div>
+                    <div class="pos-seg mb-2" id="paySeg"><button type="button" class="on" data-pay="Cash"><i class="bi bi-cash me-1"></i>Cash</button><button type="button" data-pay="GCash">GCash</button></div>
+                    <div id="cashBox">
+                        <label class="small text-muted mb-1" for="cashReceived">Cash received</label>
+                        <input id="cashReceived" type="number" class="form-control form-control-lg text-end fw-bold mb-2" min="0" step="0.01" placeholder="0.00">
+                        <div class="pos-change mb-3" id="changeBox"><span>Change / Sukli</span><span id="changeAmount">&#8369;0.00</span></div>
+                    </div>
+                    <div id="gcashBox" hidden>
+                        <div class="pos-gcash mb-2">
+                            <div class="fw-bold">Let the customer scan the shop's GCash QR code.</div>
+                            <div class="small text-muted">Exact amount: <b id="gcashAmount">&#8369;0.00</b></div>
+                        </div>
+                        <label class="small text-muted mb-1" for="gcashReference">GCash reference number (optional)</label>
+                        <input id="gcashReference" class="form-control mb-3" maxlength="100">
+                    </div>
+                    <div class="text-danger small mb-2" id="formError" role="alert"></div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mb-2"><i class="bi bi-check2-circle me-1"></i>Save &amp; Print Receipt</button>
+                    <button type="button" class="btn btn-outline-secondary w-100" id="clearOrder">Clear</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+</div>
+
+<script>
+(() => {
+    const kgPerLoad = @Model.KgPerLoad.ToString(CultureInfo.InvariantCulture);
+    const rushFee = @Money(Model.RushFee);
+    const packageFee = @Money(Model.PackageFee);
+    const services = @Json.Serialize(Model.Services.Select(s => new { name = s.Name, label = ServiceLabel(s.Name), price = s.Price }));
+    const products = @Json.Serialize(Model.Products.Select(p => new { id = p.ServiceId, name = ProductLabel(p.Name), price = p.Price }));
+    const searchUrl = '@Url.Action("SearchCustomers", "Pos")';
+    const peso = value => '₱' + value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const loadsFor = weight => weight > 0 ? Math.ceil(weight / kgPerLoad) : 1;
+
+    const state = { customer: null, isNew: false, mode: 'Full-Service', rush: false, shop: false, loads: {}, products: {}, own: { detergent: false, softener: false }, pay: 'Cash' };
+    const $ = id => document.getElementById(id);
+
+    // ---------- Customer search ----------
+    const search = $('customerSearch'), results = $('customerResults');
+    let searchTimer = 0;
+    function badge(c) {
+        return c.isRegular ? `<span class="pos-suki">★ Suki · ${c.completedOrders} orders</span>`
+                           : `<span class="pos-cnt">${c.completedOrders} orders</span>`;
+    }
+    const escapeHtml = text => String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    async function findCustomers(term) {
+        const response = await fetch(`${searchUrl}?q=${encodeURIComponent(term)}`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+        return response.ok ? response.json() : [];
+    }
+    search.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const term = search.value.trim();
+        if (term.length < 2) { results.hidden = true; return; }
+        searchTimer = setTimeout(async () => {
+            const list = await findCustomers(term);
+            results.innerHTML = list.map((c, index) => `
+                <div class="pos-cust" data-index="${index}">
+                    <span class="pos-av">${escapeHtml(c.name.charAt(0).toUpperCase())}</span>
+                    <div class="flex-grow-1"><b>${escapeHtml(c.name)}</b> ${badge(c)}
+                        <div class="text-muted small">${escapeHtml(c.phone)}${c.lastVisit ? ' · last visit ' + escapeHtml(c.lastVisit) : ''}</div></div>
+                    <span class="fw-bold small text-primary">Select</span>
+                </div>`).join('') + `
+                <div class="pos-cust text-primary" data-new="1" style="border-top:1px solid #eef2f7">
+                    <i class="bi bi-person-plus-fill"></i><span><b>${list.length ? 'Not in the list?' : 'No customer found.'}</b> Add as new customer</span>
+                </div>`;
+            results.querySelectorAll('[data-index]').forEach(row => row.addEventListener('click', () => selectCustomer(list[Number(row.dataset.index)])));
+            results.querySelector('[data-new]').addEventListener('click', () => openNewCustomer(term));
+            results.hidden = false;
+        }, 250);
+    });
+    document.addEventListener('click', event => { if (!event.target.closest('#customerSearchBox')) results.hidden = true; });
+
+    function selectCustomer(customer) {
+        state.customer = customer; state.isNew = false;
+        $('selectedInitial').textContent = customer.name.charAt(0).toUpperCase();
+        $('selectedName').textContent = customer.name;
+        $('selectedBadge').innerHTML = badge(customer);
+        $('selectedPhone').textContent = customer.phone;
+        $('customerSearchBox').hidden = true; $('customerNew').hidden = true; $('customerSelected').hidden = false;
+        results.hidden = true;
+    }
+    function openNewCustomer(term) {
+        state.customer = null; state.isNew = true;
+        const digits = (term || '').replace(/\D/g, '');
+        if (digits.length >= 7) $('newPhone').value = term;
+        else if (term) { const parts = term.split(/\s+/); $('newFirstName').value = parts[0]; $('newLastName').value = parts.slice(1).join(' '); }
+        $('customerSearchBox').hidden = true; $('customerSelected').hidden = true; $('customerNew').hidden = false;
+        results.hidden = true; $('newFirstName').focus();
+    }
+    function backToSearch() {
+        state.customer = null; state.isNew = false;
+        $('customerSelected').hidden = true; $('customerNew').hidden = true; $('customerSearchBox').hidden = false;
+        search.value = ''; search.focus();
+    }
+    $('newCustomerButton').addEventListener('click', () => openNewCustomer(''));
+    $('changeCustomer').addEventListener('click', backToSearch);
+    $('backToSearch').addEventListener('click', backToSearch);
+
+    let phoneTimer = 0;
+    $('newPhone').addEventListener('input', () => {
+        clearTimeout(phoneTimer);
+        const notice = $('duplicateNotice');
+        const digits = $('newPhone').value.replace(/\D/g, '');
+        if (digits.length < 7) { notice.hidden = true; return; }
+        phoneTimer = setTimeout(async () => {
+            const match = (await findCustomers(digits)).find(c => c.phone.replace(/\D/g, '') === digits);
+            if (!match) { notice.hidden = true; return; }
+            notice.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>This number is already registered to <b>${escapeHtml(match.name)}</b>. <button type="button" class="btn btn-sm btn-warning ms-1 py-0">Select instead</button>`;
+            notice.querySelector('button').addEventListener('click', () => selectCustomer(match));
+            notice.hidden = false;
+        }, 300);
+    });
+
+    // ---------- Services ----------
+    // Full-Service is EZ-K's wash-dry-fold package: the three steps are always chosen together
+    // with the same number of loads. Self-Service is wash and/or dry, each with its own loads.
+    const isFull = () => state.mode === 'Full-Service';
+    const tiles = Array.from(document.querySelectorAll('.pos-tile'));
+    const suggestedLoads = () => loadsFor(Number($('weightInput').value || 0));
+    function showLoads(tile, value) {
+        state.loads[tile.dataset.service] = value;
+        tile.classList.toggle('on', value > 0);
+        tile.querySelector('.pos-qty').hidden = value === 0;
+        tile.querySelector('[data-count]').textContent = value;
+    }
+    function setLoads(tile, value) {
+        value = Math.max(0, Math.min(50, value));
+        if (isFull()) tiles.forEach(other => showLoads(other, Math.max(1, value)));
+        else showLoads(tile, value);
+        render();
+    }
+    tiles.forEach(tile => {
+        state.loads[tile.dataset.service] = 0;
+        tile.addEventListener('click', event => {
+            const step = event.target.closest('[data-step]');
+            if (step) { setLoads(tile, state.loads[tile.dataset.service] + Number(step.dataset.step)); return; }
+            if (state.loads[tile.dataset.service] === 0) setLoads(tile, suggestedLoads());
+        });
+        tile.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); tile.click(); } });
+    });
+    $('weightInput').addEventListener('input', () => {
+        // A new weight sets the selected services to the suggested load count; staff can still adjust it.
+        tiles.filter(tile => tile.classList.contains('on')).forEach(tile => setLoads(tile, suggestedLoads()));
+        render();
+    });
+    function applyMode() {
+        const full = isFull();
+        document.querySelector('[data-tile-wrap="Folding"]').hidden = !full;
+        $('packagePanel').hidden = !full;
+        $('sachetPanel').hidden = full;
+        $('serviceHint').textContent = full
+            ? 'Full-Service is the wash-dry-fold package. All three are included; set the number of loads.'
+            : 'Self-Service: tap Wash and/or Dry. The customer operates the machines.';
+        // Switching method starts the service and supply choices over.
+        tiles.forEach(tile => showLoads(tile, full ? suggestedLoads() : 0));
+        Object.keys(state.products).forEach(id => delete state.products[id]);
+        document.querySelectorAll('.pos-prod[data-product]').forEach(card => { card.classList.remove('on'); card.querySelector('.pos-qty').hidden = true; });
+        document.querySelectorAll('.pos-own').forEach(card => { state.own[card.dataset.own] = false; card.classList.remove('on'); });
+    }
+
+    // Full-Service supplies: the customer's own (package only) or the shop's (+ fee per load).
+    bindSeg('supplySeg', 'shop', value => { state.shop = value === '1'; $('packageBrands').hidden = !state.shop; });
+    ['packageDetergent', 'packageFabcon'].forEach(id => $(id).addEventListener('change', render));
+    const chosen = id => $(id).selectedOptions[0];
+    function bindSeg(segId, attr, apply) {
+        $(segId).querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+            if (button.disabled) return;
+            $(segId).querySelectorAll('button').forEach(other => other.classList.toggle('on', other === button));
+            apply(button.dataset[attr]); render();
+        }));
+    }
+    bindSeg('modeSeg', 'mode', mode => {
+        state.mode = mode;
+        const rushButtons = $('rushSeg').querySelectorAll('button');
+        if (mode === 'Self Service') { state.rush = false; rushButtons[0].classList.add('on'); rushButtons[1].classList.remove('on'); }
+        rushButtons[1].disabled = mode === 'Self Service';
+        applyMode();
+    });
+    bindSeg('rushSeg', 'rush', value => state.rush = value === '1');
+    bindSeg('paySeg', 'pay', value => { state.pay = value; $('cashBox').hidden = value !== 'Cash'; $('gcashBox').hidden = value !== 'GCash'; });
+
+    // ---------- Products ----------
+    document.querySelectorAll('.pos-prod[data-product]').forEach(card => {
+        const id = Number(card.dataset.product), stock = Number(card.dataset.stock);
+        const setQty = value => {
+            if (card.classList.contains('out')) return;
+            const qty = Math.max(0, Math.min(stock, 50, value));
+            if (qty === 0) delete state.products[id]; else state.products[id] = qty;
+            card.classList.toggle('on', qty > 0);
+            card.querySelector('.pos-qty').hidden = qty === 0;
+            card.querySelector('[data-count]').textContent = qty;
+            render();
+        };
+        card.addEventListener('click', event => {
+            const step = event.target.closest('[data-step]');
+            if (step) { setQty((state.products[id] || 0) + Number(step.dataset.step)); return; }
+            if (!state.products[id]) setQty(1);
+        });
+        card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); } });
+    });
+    document.querySelectorAll('.pos-own').forEach(card => card.addEventListener('click', () => {
+        const kind = card.dataset.own;
+        state.own[kind] = !state.own[kind];
+        card.classList.toggle('on', state.own[kind]);
+        render();
+    }));
+
+    // ---------- Summary ----------
+    function lines() {
+        const list = [];
+        const loadText = loads => `${loads} load${loads > 1 ? 's' : ''}`;
+        services.forEach(s => { const loads = state.loads[s.name] || 0; if (loads) list.push({ label: s.label, detail: `${loadText(loads)} × ${peso(s.price)}`, amount: loads * s.price }); });
+        if (isFull() && state.shop) {
+            const loads = state.loads.Washing || 0, detergent = chosen('packageDetergent'), fabcon = chosen('packageFabcon');
+            const brands = [detergent, fabcon].filter(option => option && option.value).map(option => option.dataset.name);
+            list.push({ label: 'Detergent & Fabcon (shop)', detail: `${loadText(loads)} × ${peso(packageFee)}${brands.length ? ' · ' + brands.join(', ') : ''}`, amount: loads * packageFee });
+            const extra = [detergent, fabcon].reduce((sum, option) => sum + Number(option?.dataset.extra || 0), 0);
+            if (extra > 0) list.push({ label: 'Premium detergent', detail: `${loadText(loads)} × ${peso(extra)}`, amount: loads * extra });
+        }
+        if (isFull() && !state.shop && (state.loads.Washing || 0) > 0)
+            list.push({ label: "Customer's own detergent & fabcon", detail: 'no charge', amount: 0 });
+        products.forEach(p => { const qty = state.products[p.id] || 0; if (qty) list.push({ label: p.name, detail: `${qty} × ${peso(p.price)}`, amount: qty * p.price }); });
+        if (state.own.detergent) list.push({ label: "Customer's own detergent", detail: 'no charge', amount: 0 });
+        if (state.own.softener) list.push({ label: "Customer's own fabric conditioner", detail: 'no charge', amount: 0 });
+        if (state.rush) list.push({ label: 'Rush Fee', detail: 'per order', amount: rushFee });
+        return list;
+    }
+    function total() { return Math.round(lines().reduce((sum, line) => sum + line.amount, 0) * 100) / 100; }
+    function render() {
+        const items = lines(), sum = total(), weight = Number($('weightInput').value || 0);
+        $('summaryWeight').textContent = weight > 0 ? `${weight} kg · about ${loadsFor(weight)} load(s) · ${state.mode === 'Self Service' ? 'Self-Service' : 'Full-Service'}` : '';
+        $('loadHint').textContent = weight > 0 ? `≈ ${loadsFor(weight)} load(s) (1 load = up to ${kgPerLoad} kg)` : `1 load = up to ${kgPerLoad} kg`;
+        $('summaryLines').innerHTML = items.length
+            ? items.map(line => `<div class="pos-line"><div>${escapeHtml(line.label)}<small>${escapeHtml(line.detail)}</small></div><b>${peso(line.amount)}</b></div>`).join('')
+            : '<div class="text-muted small py-3 text-center">No items yet. Tap a service to start.</div>';
+        $('summaryTotal').textContent = peso(sum);
+        $('gcashAmount').textContent = peso(sum);
+        const cash = Number($('cashReceived').value || 0), change = cash - sum;
+        $('changeAmount').textContent = cash > 0 && change < 0 ? `Short ${peso(-change)}` : peso(Math.max(0, change));
+        $('changeBox').classList.toggle('short', cash > 0 && change < 0);
+    }
+    $('cashReceived').addEventListener('input', render);
+
+    // ---------- Submit ----------
+    function hidden(name, value) { const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; $('posHidden').appendChild(input); }
+    $('posForm').addEventListener('submit', event => {
+        const error = $('formError'); error.textContent = '';
+        const weight = Number($('weightInput').value || 0), sum = total();
+        let message = '';
+        if (!state.customer && !state.isNew) message = 'Select a customer or add a new one.';
+        else if (state.isNew && (!$('newFirstName').value.trim() || !$('newLastName').value.trim() || $('newPhone').value.replace(/\D/g, '').length < 7)) message = 'Enter the new customer\'s first name, last name and contact number.';
+        else if (!(weight > 0)) message = 'Enter the actual weight of the laundry.';
+        else if (!Object.values(state.loads).some(loads => loads > 0)) message = isFull() ? 'Set the number of loads for the wash-dry-fold package.' : 'Add at least one Self-Service wash or dry.';
+        else if (isFull() && state.shop && (!$('packageDetergent').value || !$('packageFabcon').value)) message = 'Choose the detergent and fabric conditioner brands used for the package.';
+        else if (state.pay === 'Cash' && Number($('cashReceived').value || 0) + 0.005 < sum) message = 'The cash received is less than the total.';
+        if (message) { event.preventDefault(); error.textContent = message; return; }
+
+        $('posHidden').innerHTML = '';
+        if (state.customer) hidden('CustomerId', state.customer.id);
+        else { hidden('NewFirstName', $('newFirstName').value.trim()); hidden('NewLastName', $('newLastName').value.trim()); hidden('NewPhone', $('newPhone').value.trim()); }
+        hidden('ServiceMode', state.mode); hidden('Weight', weight); hidden('IsRush', state.rush);
+        hidden('WashLoads', state.loads.Washing || 0); hidden('DryLoads', state.loads.Drying || 0); hidden('FoldLoads', state.loads.Folding || 0);
+        Object.entries(state.products).forEach(([id, qty], index) => { hidden(`Products[${index}].ServiceId`, id); hidden(`Products[${index}].Quantity`, qty); });
+        hidden('OwnDetergent', state.own.detergent); hidden('OwnSoftener', state.own.softener);
+        hidden('ShopSupplies', isFull() && state.shop);
+        if (isFull() && state.shop) { hidden('PackageDetergentId', $('packageDetergent').value); hidden('PackageFabconId', $('packageFabcon').value); }
+        hidden('PaymentMethod', state.pay); hidden('CashReceived', Number($('cashReceived').value || 0)); hidden('GCashReference', $('gcashReference').value.trim());
+        event.submitter?.setAttribute('disabled', 'disabled');
+    });
+    $('clearOrder').addEventListener('click', () => { if (confirm('Clear this order?')) window.location.reload(); });
+    applyMode();
+    render();
+})();
+</script>
