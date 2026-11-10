@@ -23,10 +23,11 @@
             <strong class="text-primary fs-5">₱@Model.GCashAmount.ToString("N2")</strong>
         </div>
         
-        <!-- QR CODE IMAGE (PDF Page 8) -->
-        <div class="my-4 p-3 border rounded-3 bg-light d-inline-block">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=EZKLaundryPayment" class="img-fluid" style="filter: blur(0.5px);">
+        <!-- Shop GCash (InstaPay) QR code. Replace wwwroot/images/gcash-qr.png to change the receiving account. -->
+        <div class="my-4 p-3 border rounded-3 bg-white d-inline-block">
+            <img src="~/images/gcash-qr.png" alt="GCash QR code" width="265" class="img-fluid">
         </div>
+        <p class="small text-muted mb-3">Scan with GCash, enter the amount above, then tap the button below.</p>
 
         @if (Model.UseReward)
         {
