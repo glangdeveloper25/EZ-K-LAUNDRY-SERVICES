@@ -298,9 +298,9 @@
         }
 
         @{
-            // Show the latest downtime notice from the last 24 hours prominently.
+            // Show the latest unread downtime notice from the last 24 hours prominently; marking it read hides it.
             var downtimeNotice = Model.Notifications
-                .Where(n => n.Title == EZKLaundrySystem.Controllers.StaffController.DowntimeNoticeTitle && n.SentAt > DateTime.Now.AddHours(-24))
+                .Where(n => n.Title == EZKLaundrySystem.Controllers.StaffController.DowntimeNoticeTitle && !n.IsRead && n.SentAt > DateTime.Now.AddHours(-24))
                 .OrderByDescending(n => n.SentAt)
                 .FirstOrDefault();
         }
